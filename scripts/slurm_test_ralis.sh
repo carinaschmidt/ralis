@@ -16,19 +16,37 @@ scontrol show job $SLURM_JOB_ID
 
 # insert your commands here
 
-ckpt_path = '/home/baumgartner/cbaumgartner/ckpt_seg'
-data_path = '/mnt/qb/baumgartner/cschmidt77_data'
+ckpt_path='/home/baumgartner/cbaumgartner/ckpt_seg'
+data_path='/mnt/qb/baumgartner/cschmidt77_data'
+code_path='/home/baumgartner/cbaumgartner/devel/ralis/'
 
 for budget in 480 #720 960 1200 1440 1920
     do
     for seed in 20 #50 82 12 4560
         do
-        python -u run.py --exp-name 'RALIS_camvid_test_seed'$seed \
-        --al-algorithm 'ralis' --checkpointer --region-size 80 90 \
-        --ckpt-path $ckpt_path --data-path $data_path \
-        --load-weights --exp-name-toload 'camvid_pretrained_dt' \
-        --dataset 'camvid' --lr 0.001 --train-batch-size 32 --val-batch-size 4 --patience 150 \
-        --input-size 224 224 --only-last-labeled --budget-labels $budget  --num-each-iter 24  --rl-pool 10 --seed $seed \
-        --train --test --final-test --exp-name-toload-rl 'RALIS_camvid_train_seed'$seed
+        singularity exec --nv --bind /mnt/qb/baumgartner /home/baumgartner/cbaumgartner/deeplearning.sif \
+        python3 -u $code_path/run.py \
+        --exp-name 'RALIS_camvid_test_seed'$seed \
+        --al-algorithm 'ralis' \
+        --checkpointer \
+        --region-size 80 90 \
+        --ckpt-path $ckpt_path \
+        --data-path $data_path \
+        --load-weights \
+        --exp-name-toload 'camvid_pretrained_dt' \
+        --dataset 'camvid' \
+        --lr 0.001 \
+        --train-batch-size 32 \
+        --val-batch-size 4 \
+        --patience 150 \
+        --input-size 224 224 \
+        --only-last-labeled \
+        --budget-labels $budget \
+        --num-each-iter 24 \
+        --rl-pool 10 --seed $seed \
+        --train \
+        --test \
+        --final-test \
+        --exp-name-toload-rl 'RALIS_camvid_train_seed'$seed
         done
     done
