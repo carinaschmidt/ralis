@@ -15,10 +15,10 @@
 # print info about current job
 scontrol show job $SLURM_JOB_ID 
 
-ckpt_path='/home/baumgartner/cbaumgartner/ckpt_seg/'
+ckpt_path='/home/baumgartner/cschmidt77/ckpt_seg/'
 data_path='/mnt/qb/baumgartner/cschmidt77_data/'
-code_path='/home/baumgartner/cbaumgartner/devel/ralis/'
-sif_path='/home/baumgartner/cbaumgartner/deeplearning.sif'
+code_path='/home/baumgartner/cschmidt77/devel/ralis/'
+sif_path='/home/baumgartner/cschmidt77/deeplearning.sif'
 
 exec_command="singularity exec --nv --bind $data_path $sif_path"
 

@@ -1,9 +1,9 @@
 import argparse
 import os
 
-ckpt_path = '/home/baumgartner/cbaumgartner/ckpt_seg'
+ckpt_path = '/home/baumgartner/cschmidt77/ckpt_seg'
 data_path = '/mnt/qb/baumgartner/cschmidt77_data'
-code_path = '/home/baumgartner/cbaumgartner/devel/ralis'
+code_path = '/home/baumgartner/cschmidt77/devel/ralis'
 
 
 def get_arguments():
