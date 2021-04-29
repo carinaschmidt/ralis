@@ -59,7 +59,7 @@ def make_dataset(quality, mode, root):
 
 
 class CityScapes_al_splits(data.Dataset):
-    def __init__(self, quality, mode, data_path='', joint_transform=None,
+    def __init__(self, quality, mode, data_path='', code_path='', joint_transform=None,
                  sliding_crop=None, transform=None, target_transform=None, supervised=False, subset=False):
         self.num_classes = num_classes
         self.ignore_label = ignore_label
@@ -86,7 +86,9 @@ class CityScapes_al_splits(data.Dataset):
                               28: 15, 29: ignore_label, 30: ignore_label,
                               31: 16, 32: 17, 33: 18}
 
-        splits = np.load('data/cityscapes_al_splits.npy', allow_pickle=True).item()
+        splits = np.load(
+            os.path.join(code_path, 'data/cityscapes_al_splits.npy'), allow_pickle=True
+            ).item()
         # d_t
         if subset:
             self.imgs = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_t'])]

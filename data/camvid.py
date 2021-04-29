@@ -45,7 +45,7 @@ def make_dataset(mode, root):
 
 
 class Camvid(data.Dataset):
-    def __init__(self, quality, mode, data_path='', joint_transform=None,
+    def __init__(self, quality, mode, data_path='', code_path='', joint_transform=None,
                  sliding_crop=None, transform=None, target_transform=None, subset=False):
         self.num_classes = num_classes
         self.ignore_label = ignore_label
@@ -60,7 +60,10 @@ class Camvid(data.Dataset):
         self.transform = transform
         self.target_transform = target_transform
 
-        d_t = np.load('data/camvid_al_splits.npy', allow_pickle=True).item()['d_t']
+        d_t = np.load(
+            os.path.join(code_path, 'data/camvid_al_splits.npy'), 
+            allow_pickle=True
+            ).item()['d_t']
 
         if subset:
             self.imgs = [img for i, img in enumerate(self.imgs) if (img[-1] in d_t)]

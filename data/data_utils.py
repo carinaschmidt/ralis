@@ -6,7 +6,7 @@ import utils.transforms as extended_transforms
 from data import cityscapes, gtav, cityscapes_al, cityscapes_al_splits, camvid, camvid_al
 
 
-def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256, 512),
+def get_data(data_path, code_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256, 512),
              supervised=False, num_each_iter=1, only_last_labeled=False, dataset='cityscapes', test=False,
              al_algorithm='ralis', full_res=False,
              region_size=128):
@@ -33,33 +33,39 @@ def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256
         elif dataset == 'camvid':
             train_set = camvid.Camvid('fine', 'train',
                                       data_path=data_path,
+                                      code_path=code_path,
                                       joint_transform=train_joint_transform,
                                       transform=input_transform,
                                       target_transform=target_transform)
             val_set = camvid.Camvid('fine', 'val',
                                     data_path=data_path,
+                                    code_path=code_path,
                                     joint_transform=val_joint_transform,
                                     transform=input_transform,
                                     target_transform=target_transform)
         elif dataset == 'camvid_subset':
             train_set = camvid.Camvid('fine', 'train',
                                       data_path=data_path,
+                                      code_path=code_path,
                                       joint_transform=train_joint_transform,
                                       transform=input_transform,
                                       target_transform=target_transform, subset=True)
             val_set = camvid.Camvid('fine', 'val',
                                     data_path=data_path,
+                                    code_path=code_path,
                                     joint_transform=val_joint_transform,
                                     transform=input_transform,
                                     target_transform=target_transform)
         elif dataset == 'cs_upper_bound':
             train_set = cityscapes_al_splits.CityScapes_al_splits('fine', 'train',
                                                                   data_path=data_path,
+                                                                  code_path=code_path,
                                                                   joint_transform=train_joint_transform,
                                                                   transform=input_transform,
                                                                   target_transform=target_transform, supervised=True)
             val_set = cityscapes.CityScapes('fine', 'val',
                                             data_path=data_path,
+                                            code_path=code_path,
                                             joint_transform=val_joint_transform,
                                             transform=input_transform,
                                             target_transform=target_transform)
@@ -67,11 +73,13 @@ def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256
         elif dataset == 'cityscapes_subset':
             train_set = cityscapes_al_splits.CityScapes_al_splits('fine', 'train',
                                                                   data_path=data_path,
+                                                                  code_path=code_path,
                                                                   joint_transform=train_joint_transform,
                                                                   transform=input_transform,
                                                                   target_transform=target_transform, subset=True)
             val_set = cityscapes.CityScapes('fine', 'val',
                                             data_path=data_path,
+                                            code_path=code_path,
                                             joint_transform=val_joint_transform,
                                             transform=input_transform,
                                             target_transform=target_transform)
@@ -79,11 +87,13 @@ def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256
         else:
             train_set = cityscapes.CityScapes('fine', 'train',
                                               data_path=data_path,
+                                              code_path=code_path,
                                               joint_transform=train_joint_transform,
                                               transform=input_transform,
                                               target_transform=target_transform)
             val_set = cityscapes.CityScapes('fine', 'val',
                                             data_path=data_path,
+                                            code_path=code_path,
                                             joint_transform=val_joint_transform,
                                             transform=input_transform,
                                             target_transform=target_transform)
@@ -96,6 +106,7 @@ def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256
                 split = 'test'
             train_set = cityscapes_al.CityScapes_al('fine', 'train',
                                                     data_path=data_path,
+                                                    code_path=code_path,
                                                     joint_transform=train_joint_transform,
                                                     joint_transform_al=al_train_joint_transform,
                                                     transform=input_transform,
@@ -104,6 +115,7 @@ def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256
                                                     split=split, region_size=region_size)
             candidate_set = cityscapes_al.CityScapes_al('fine', 'train',
                                                         data_path=data_path,
+                                                        code_path=code_path,
                                                         joint_transform=None,
                                                         candidates_option=True,
                                                         transform=input_transform,
@@ -112,6 +124,7 @@ def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256
 
             val_set = cityscapes_al_splits.CityScapes_al_splits('fine', 'train',
                                                                 data_path=data_path,
+                                                                code_path=code_path,
                                                                 joint_transform=val_joint_transform,
                                                                 transform=input_transform,
                                                                 target_transform=target_transform)
@@ -119,6 +132,7 @@ def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256
         elif dataset == 'camvid':
             train_set = camvid_al.Camvid_al('fine', 'train',
                                             data_path=data_path,
+                                            code_path=code_path,
                                             joint_transform=train_joint_transform,
                                             transform=input_transform,
                                             target_transform=target_transform, num_each_iter=num_each_iter,
@@ -127,6 +141,7 @@ def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256
                                             region_size=region_size)
             candidate_set = camvid_al.Camvid_al('fine', 'train',
                                                 data_path=data_path,
+                                                code_path=code_path,
                                                 joint_transform=None,
                                                 candidates_option=True,
                                                 transform=input_transform,
@@ -136,6 +151,7 @@ def get_data(data_path, tr_bs, vl_bs, n_workers=0, scale_size=0, input_size=(256
 
             val_set = camvid.Camvid('fine', 'val',
                                     data_path=data_path,
+                                    code_path=code_path,
                                     joint_transform=val_joint_transform,
                                     transform=input_transform,
                                     target_transform=target_transform)

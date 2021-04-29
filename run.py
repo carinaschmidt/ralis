@@ -66,6 +66,7 @@ def main(args):
 
     ####------ Load training and validation data ------####
     kwargs_data = {"data_path": args.data_path,
+                   "code_path": args.code_path,
                    "tr_bs": args.train_batch_size,
                    "vl_bs": args.val_batch_size,
                    "n_workers": 4,
@@ -294,6 +295,7 @@ def main(args):
 
             ####------ Load training and validation data ------####
             kwargs_data = {"data_path": args.data_path,
+                           "code_path": args.code_path,
                            "tr_bs": args.train_batch_size,
                            "vl_bs": args.val_batch_size,
                            "n_workers": 4,

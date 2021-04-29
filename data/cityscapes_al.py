@@ -59,7 +59,7 @@ def make_dataset(quality, mode, root):
 
 
 class CityScapes_al(data.Dataset):
-    def __init__(self, quality, mode, data_path='', joint_transform=None, joint_transform_al=None,
+    def __init__(self, quality, mode, data_path='', code_path='', joint_transform=None, joint_transform_al=None,
                  sliding_crop=None, transform=None, target_transform=None, candidates_option=False,
                  region_size=(128, 128),
                  num_each_iter=1, only_last_labeled=True, split='train'):
@@ -69,7 +69,9 @@ class CityScapes_al(data.Dataset):
         self.root = data_path + path
         self.imgs = make_dataset(quality, mode, self.root)
 
-        splits = np.load('data/cityscapes_al_splits.npy', allow_pickle=True).item()
+        splits = np.load(
+            os.path.join(code_path, 'data/cityscapes_al_splits.npy'), allow_pickle=True
+            ).item()
         self.state_subset = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_s'])]
         self.state_subset_regions = {}
         for i in range(len(splits['d_s'])):

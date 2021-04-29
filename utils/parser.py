@@ -3,6 +3,7 @@ import os
 
 ckpt_path = '/home/baumgartner/cbaumgartner/ckpt_seg'
 data_path = '/mnt/qb/baumgartner/cschmidt77_data'
+code_path = '/home/baumgartner/cbaumgartner/devel/ralis'
 
 
 def get_arguments():
@@ -16,6 +17,8 @@ def get_arguments():
                         help="Path to store weights, logs and"
                              " other experiment related files.")
     parser.add_argument("--data-path", type=str, default=data_path,
+                        help="Path where the datasets can be found.")
+    parser.add_argument("--code-path", type=str, default=code_path,
                         help="Path where the datasets can be found.")
     parser.add_argument("--exp-name", type=str, default='',
                         help="Experiment name")
