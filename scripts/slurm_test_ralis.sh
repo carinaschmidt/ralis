@@ -16,8 +16,8 @@ scontrol show job $SLURM_JOB_ID
 
 # insert your commands here
 
-ckpt_path='/home/baumgartner/cbaumgartner/ckpt_seg'
-data_path='/mnt/qb/baumgartner/cschmidt77_data'
+ckpt_path='/home/baumgartner/cbaumgartner/ckpt_seg/'
+data_path='/mnt/qb/baumgartner/cschmidt77_data/'
 code_path='/home/baumgartner/cbaumgartner/devel/ralis/'
 
 for budget in 480 #720 960 1200 1440 1920
