@@ -1,8 +1,8 @@
 import argparse
 import os
 
-ckpt_path = '/home/casanova/scratch/ckpt_seg'
-data_path = '/home/casanova/scratch/'
+ckpt_path = '/home/baumgartner/cbaumgartner/ckpt_seg'
+data_path = '/mnt/qb/baumgartner/cschmidt77_data'
 
 
 def get_arguments():
