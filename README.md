@@ -48,7 +48,7 @@ Camvid: https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid
 
 Cityscapes: https://www.cityscapes-dataset.com/
 
-## Additional Note by Carina Schmidt:
+### Additional Note by Carina Schmidt:
 Link to the GTA5 dataset: https://download.visinf.tu-darmstadt.de/data/from_games/
 
 ## Trained models
