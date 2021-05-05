@@ -50,6 +50,7 @@ Cityscapes: https://www.cityscapes-dataset.com/
 
 ### Additional Note by Carina Schmidt:
 Link to the GTA5 dataset: https://download.visinf.tu-darmstadt.de/data/from_games/
+(not needed to run the code)
 
 ## Trained models
 To download the trained RALIS models for Camvid and Cityscapes (as well as the pretrained segmentation model on GTA and D_T subsets): https://drive.google.com/file/d/13C4e0bWw6SEjTAD7JdAfLGVz7p7Veeb9/view?usp=sharing
