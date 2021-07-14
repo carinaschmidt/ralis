@@ -3,6 +3,7 @@ import math
 import numpy as np
 import os
 import random
+from numpy.lib.type_check import imag
 from scipy.stats import entropy
 
 import torch
@@ -20,7 +21,6 @@ EPS_START = 0.9
 EPS_END = 0.05
 EPS_DECAY = 10
 
-
 def create_models(dataset, al_algorithm, region_size):
     """Returns segmentation model FPN with backbone ResNet50
     :param dataset: (str) Which dataset to use.
@@ -30,16 +30,35 @@ def create_models(dataset, al_algorithm, region_size):
     """
 
     # Segmentation network
-    n_cl = 11 if 'camvid' in dataset else 19
+    #n_cl = 11 if 'camvid' in dataset else 19
+    if 'camvid' in dataset:
+        n_cl = 11
+    elif 'cityscapes' in dataset:
+        n_cl = 19
+    elif 'acdc' in dataset:
+        n_cl = 4
+    else:
+        print('Specify the correct number of classes of your dataset')
     net_type = FPN50_bayesian if al_algorithm == 'bald' else FPN50
     net = net_type(num_classes=n_cl).cuda()
     print('Model has ' + str(count_parameters(net)))
 
     # Query network (and target network for DQN)
-    input_size = [(n_cl + 1) + 3 * 64, (n_cl + 1) + 3 * 64]
+    input_size = [(n_cl + 1) + 3 * 64, (n_cl + 1) + 3 * 64]  #here for ACDC [198, 198]
     if al_algorithm == 'ralis':
-        image_size = [480, 360] if 'camvid' in dataset else [2048, 1024]
-        indexes_full_state = 10 * (image_size[0] // region_size[0]) * (image_size[1] // region_size[1])
+        #image_size = [480, 360] if 'camvid' or 'acdc' in dataset else [2048, 1024]
+        if 'acdc' in dataset:
+            image_size = [256,256]
+        elif 'camvid' in dataset:
+            image_size = [480, 360]
+        else:
+            image_size = [2048, 1024]
+        print('Check the image size for acdc!')
+        #@carina changed indexes_full_state for ACDC
+        if 'acdc' in dataset:
+            indexes_full_state = 18 * (image_size[0] // region_size[0]) * (image_size[1] // region_size[1]) #288
+        else:
+            indexes_full_state = 10 * (image_size[0] // region_size[0]) * (image_size[1] // region_size[1]) #here: 160 for ACDC
 
         policy_net = QueryNetworkDQN(input_size=input_size[0], input_size_subset=input_size[1],
                                      indexes_full_state=indexes_full_state).cuda()
@@ -161,7 +180,15 @@ def load_models(net, load_weights, exp_name_toload, snapshot,
         best_record = None
         curr_epoch = None
     else:
-        num_classes = 11 if 'camvid' in dataset else 19
+        #num_classes = 11 if 'camvid' in dataset else 19
+        if 'camvid' in dataset:
+            num_classes = 11
+        elif 'acdc' in dataset:
+            num_classes = 4
+        elif 'cityscapes' in dataset:
+            num_classes = 19
+        else:
+            print("Define the correct number of classes for your dataset! ")
         logger, best_record, curr_epoch = get_logfile(ckpt_path, exp_name, checkpointer, snapshot,
                                                       num_classes=num_classes)
 
@@ -183,6 +210,7 @@ def get_region_candidates(candidates, train_set, num_regions=2):
     #### --- Get candidate regions --- ####
     counter_regions = 0
     available_regions = train_set.get_num_unlabeled_regions()
+    print ('Available regions are ' + str(available_regions)) #@carina 
     rx, ry = train_set.get_unlabeled_regions()
     while counter_regions < total_regions and (total_regions - counter_regions) <= available_regions:
         index_ = np.random.choice(len(candidates))
@@ -201,6 +229,7 @@ def get_region_candidates(candidates, train_set, num_regions=2):
     train_set.set_unlabeled_regions(rx, ry)
     print ('Regions candidates indexed! Time elapsed: ' + str(time.time() - s))
     print ('Candidate regions are ' + str(counter_regions))
+    print ('Candidate regions are len(candidate_regions) ' + str(len(candidate_regions))) #@carina 
     return candidate_regions
 
 
@@ -216,6 +245,7 @@ def compute_state(args, net, region_candidates, candidate_set, train_set, num_gr
     :return: a Torch tensor with the state-action representation, region candidates rearranged to match
     the order in state-action representation
     """
+    cand = 0
     s = time.time()
     print ('Computing state...')
     net.eval()
@@ -226,12 +256,17 @@ def compute_state(args, net, region_candidates, candidate_set, train_set, num_gr
     pred_py = None
     ent = None
     bald_map = None
+
     if args.al_algorithm == 'bald':
         net.apply(apply_dropout)
 
     region_candidates.sort()
+    #print('initial region candidates: ', region_candidates)
+
     for candidates in region_candidates:
         if not candidates[0] == old_candidate:
+            #print('candidates[0]: ', candidates[0])
+            #print('old_candidate: ', old_candidate)
             del (pred_py)
             del (predictions_py_prob)
             del (predictions_py)
@@ -243,10 +278,11 @@ def compute_state(args, net, region_candidates, candidate_set, train_set, num_gr
             inputs, gts, _, _ = candidate_set.get_specific_item(candidates[0])
             inputs, gts = Variable(inputs).cuda(), Variable(gts).cuda()
             if args.al_algorithm == 'bald':
-                outputs, _ = net(inputs.unsqueeze(0), bayesian=True, n_iter=args.bald_iter)
+                outputs, _ = net(inputs.unsqueeze(0), bayesian=True, n_iter=args.bald_iter) 
                 outputs = torch.cat(outputs)
             else:
-                outputs, _ = net(inputs.unsqueeze(0))
+                #print('inputs: ', inputs)
+                outputs, _ = net(inputs.unsqueeze(0)) 
 
             pred_py = F.softmax(outputs, dim=1).data
             del (outputs)
@@ -256,10 +292,13 @@ def compute_state(args, net, region_candidates, candidate_set, train_set, num_gr
                 predictions_py_prob = None
             else:
                 pred_py = pred_py.max(1)
-                predictions_py = pred_py[1].squeeze_(1).cpu().type(torch.FloatTensor)
-                predictions_py_prob = pred_py[0].squeeze_(1).cpu().type(torch.FloatTensor)
+                predictions_py = pred_py[1].squeeze_(1).cpu().type(torch.FloatTensor)  #prediction of classes for each pixel
+                #print('shape of predictions_py: ', predictions_py.shape)  # torch.Size([1, 256, 256])
+                predictions_py_prob = pred_py[0].squeeze_(1).cpu().type(torch.FloatTensor) #probability for each prediction
+                #print('shape of predictions_py_prob: ', predictions_py_prob.shape)
             if args.al_algorithm in ['entropy', 'ralis']:
                 ent = compute_entropy_seg(args, inputs, net)
+                #print('shape of entropy : ', ent.shape)
 
         if args.al_algorithm == 'bald':
             bald_region = bald_map[0, int(candidates[2]):int(candidates[2]) + reg_sz[1],
@@ -281,19 +320,23 @@ def compute_state(args, net, region_candidates, candidate_set, train_set, num_gr
             sample_stats.append(ent_region.item())
         # Adding action representation
         elif args.al_algorithm == 'ralis':
-            ent_region = ent[0, int(candidates[2]):int(candidates[2]) + reg_sz[1],
-                         int(candidates[1]):int(candidates[1]) + reg_sz[0]]
-
+            ent_region = ent[0, int(candidates[2]):int(candidates[2]) + reg_sz[1],  #ent.shape = torch.Size([1, 256, 256])
+                        int(candidates[1]):int(candidates[1]) + reg_sz[0]]
+            # in the third round, ent_region is tensor([], size=(0,80)) or with region size (32,32) it will be torch.Size([0,32])
             # Convert 2D maps into vector representation
+            # if region size = 64x64 after the third ? round, torch.Size([0,64])
             sample_stats = create_feature_vector_3H_region_kl_sim(pred_region, ent_region, train_set,
-                                                                  num_classes=train_set.num_classes, reg_sz=reg_sz)
+                                                                num_classes=train_set.num_classes, reg_sz=reg_sz)
         elif args.al_algorithm == 'random':
             sample_stats = []
             sample_stats.append(0.0)
         elif args.al_algorithm == 'bald':
             sample_stats = []
             sample_stats.append(bald_region.item())
-
+        # unsqueeze returns a new tensor with a dimension of size one inserted at the specified position
+        # tensor.detach() creates a tensor that shares storage with tensor that does not require grad. It detaches the output from the computational graph. 
+        # So no gradient will be backpropagated along this variable.
+        # The wrapper with torch.no_grad() temporarily set all the requires_grad flag to false. torch.no_grad says that no operation should build the graph
         state.append(torch.Tensor(sample_stats).unsqueeze(0).detach())
 
         del (pred_region)
@@ -302,18 +345,25 @@ def compute_state(args, net, region_candidates, candidate_set, train_set, num_gr
             del (ent_region)
         if args.al_algorithm == 'bald':
             del (bald_region)
+
+    # end of for loop over candidates
     del (pred_py)
     del (predictions_py)
     del (predictions_py_prob)
+
+    #if not cand == 256:
     state = torch.cat(state, dim=0)
 
     # Shuffle vector so that we do not end up with regions from the same image in the same pool
+    # for candidates[2]==256: randperm=tensor([0, 3, 2, 1])
     randperm = torch.randperm(state.size()[0])
     state = state[randperm]
     region_candidates = np.array(region_candidates)[randperm]
+    #print('region_candidates.shape: ', len(region_candidates))
     state = state.view(num_groups, state.size()[0] // num_groups, state.size()[1])
+    #print('state.shape: ', state.size())
     region_candidates = np.reshape(region_candidates,
-                                   (num_groups, region_candidates.shape[0] // num_groups, region_candidates.shape[1]))
+                                (num_groups, region_candidates.shape[0] // num_groups, region_candidates.shape[1]))
     state = Variable(state).cpu()  # [groups, cand_regions, channels, reg_size, reg_size]
 
     if args.al_algorithm == 'ralis':
@@ -322,16 +372,16 @@ def compute_state(args, net, region_candidates, candidate_set, train_set, num_gr
         # Add fixed part of state (from state subset)
         state_subset = []
         for index in range(0, len(candidate_set.state_subset)):
-            inputs, gts, _, _, regions = candidate_set.get_subset_state(index)
+            inputs, gts, _, _, regions = candidate_set.get_subset_state(index) #inputs: torch.Size([3, 256, 256])
             inputs, gts = Variable(inputs).cuda(), Variable(gts).cuda()
-            outputs, _ = net(inputs.unsqueeze(0))
-            pred_py = F.softmax(outputs).data
+            outputs, _ = net(inputs.unsqueeze(0)) #outputs = torch.Size([1, 4, 256, 256])
+            pred_py = F.softmax(outputs).data # pred_py: torch.Size([1, 4, 256, 256])
             del (outputs)
-            pred_py = pred_py.max(1)
-            predictions_py = pred_py[1].squeeze_(1).cpu().type(torch.FloatTensor)
-            predictions_py_prob = pred_py[0].squeeze_(1).cpu().type(torch.FloatTensor)
+            pred_py = pred_py.max(1) #.max(1) takes the max over dimension 1 and returns two tensors (max value in each row of pred_py, column index where max value is found).
+            predictions_py = pred_py[1].squeeze_(1).cpu().type(torch.FloatTensor) #pred_py[1]=max values in each row; gives predictions for each pixel (torch.Size([1,256,256]))
+            predictions_py_prob = pred_py[0].squeeze_(1).cpu().type(torch.FloatTensor) #gives probability for each prediction
 
-            ent = compute_entropy_seg(args, inputs, net)  # [1,1024,2048]
+            ent = compute_entropy_seg(args, inputs, net)  # ent.shape torch.Size([1, 256, 256])
             for reg in regions:
                 pred_region_prob = predictions_py_prob[0, int(reg[1]):int(reg[1]) + reg_sz[1],
                                    int(reg[0]):int(reg[0]) + reg_sz[0]]
@@ -386,9 +436,13 @@ def select_action(args, policy_net, all_state, steps_done, test=False):
             print ('Action selected with DQN!')
             with torch.no_grad():
                 # Splitting state to fit it in GPU memory
-                for i in range(0, state.size()[0], 16):
-                    if len(state_subset.shape) == 2:
-                        q_val_.append(policy_net(state[i:i + 16].cuda(),
+                for i in range(0, state.size()[0], 16): #ipdb> state.size() torch.Size([3, 50, 262])
+
+                    if len(state_subset.shape) == 2: #state_subset.shape: torch.Size([288, 198])
+
+                        # TODO solve error: running_mean should contain 288 elements not 160
+                        # policy_net(self, indexes_full_state=10 * 128, input_size=38, input_size_subset=38, sim_size=64)
+                        q_val_.append(policy_net(state[i:i + 16].cuda(),  #state[i:i + 16].shape = torch.Size([3, 50, 262])
                                                  state_subset.unsqueeze(0).repeat(state[i:i + 16].size()[0], 1,
                                                                                   1).cuda()).cpu())
                     else:
@@ -484,7 +538,6 @@ def add_kl_pool2(state, n_cl=19):
     state = torch.cat([state, sim_matrix], dim=2)
     return state
 
-
 def create_feature_vector_3H_region_kl_sim(pred_region, ent_region, train_set, num_classes=19, reg_sz=(128, 128)):
     unique, counts = np.unique(pred_region, return_counts=True)
     sample_stats = np.zeros(num_classes + 1) + 1E-7
@@ -494,10 +547,20 @@ def create_feature_vector_3H_region_kl_sim(pred_region, ent_region, train_set, n
     ks_x = int(reg_sz[0] // 8)
     ks_y = int(reg_sz[1] // 8)
     with torch.no_grad():
+        #import ipdb
+        #ipdb.set_trace()
+        #print("first max_pool: ", "ent_region", ent_region.shape, "ks_x: ", ks_x, "ks_y: ", ks_y)
+        #print('F.max_pool2d.shape: ', F.max_pool2d(5 - ent_region.view(1, 1, sz[0], sz[1]), kernel_size=(ks_y, ks_x)).shape)
         sample_stats += (5 - F.max_pool2d(5 - ent_region.view(1, 1, sz[0], sz[1]), kernel_size=(ks_y, ks_x)).view(
-            -1)).tolist()  # min entropy
+            -1)).tolist()  # min entropy  
+        #print('F.avg_pool2d: ', F.avg_pool2d(ent_region.view(1, 1, sz[0], sz[1]), kernel_size=(ks_y, ks_x)))
+        #print('F.avg_pool2d.shape: ', F.avg_pool2d(ent_region.view(1, 1, sz[0], sz[1]), kernel_size=(ks_y, ks_x)).shape)
         sample_stats += F.avg_pool2d(ent_region.view(1, 1, sz[0], sz[1]), kernel_size=(ks_y, ks_x)).view(-1).tolist()
+        #print("avg_pool: ",  "ent_region", ent_region.shape, "len of sample_stats: ", len(sample_stats), "ks_x: ", ks_x, "ks_y: ", ks_y)
+
+        #print('Second F.max_pool2d.shape: ', F.max_pool2d(ent_region.view(1, 1, sz[0], sz[1]), kernel_size=(ks_y, ks_x)).shape)
         sample_stats += F.max_pool2d(ent_region.view(1, 1, sz[0], sz[1]), kernel_size=(ks_y, ks_x)).view(-1).tolist()
+        #print("second max_pool: ", "ent_region", ent_region.shape, "len of sample_stats: ", len(sample_stats), "ks_x: ", ks_x, "ks_y: ", ks_y)
     if len(train_set.balance_cl) > 0:
         inp_hist = sample_stats[0:num_classes + 1]
         sim_sample = entropy(np.repeat(np.asarray(inp_hist)[:, np.newaxis], len(train_set.balance_cl), axis=1),
@@ -506,11 +569,16 @@ def create_feature_vector_3H_region_kl_sim(pred_region, ent_region, train_set, n
         sim_lab = list(hist / hist.sum())
         sample_stats += sim_lab
     else:
+        # add 32 zeros to sample_stats - why?
+        # @carina uncomment the following line
         sample_stats += [0.0] * 32
+    #print("return sample_stats: ", "len of sample_stats: ", len(sample_stats))
     return sample_stats
 
 
 def create_feature_vector_3H_region_kl(pred_region, ent_region, num_classes=19, reg_sz=(128, 128)):
+    #import ipdb
+    #ipdb.set_trace()
     unique, counts = np.unique(pred_region, return_counts=True)
     sample_stats = np.zeros(num_classes + 1) + 1E-7
     sample_stats[unique.astype(int)] = counts

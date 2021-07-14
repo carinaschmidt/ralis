@@ -8,8 +8,8 @@
 #SBATCH --mem=50G                 # Memory pool for all cores (see also --mem-per-cpu)
 #SBATCH --output=logs/job_%j.out  # File to which STDOUT will be written
 #SBATCH --error=logs/job_%j.err   # File to which STDERR will be written
-#SBATCH --mail-type=FAIL           # Type of email notification- BEGIN,END,FAIL,ALL
-#SBATCH --mail-user=<your-email>  # Email to which notifications will be sent
+#SBATCH --mail-type=END, FAIL           # Type of email notification- BEGIN,END,FAIL,ALL
+#SBATCH --mail-user=carina.schmidt@student.uni-tuebingen.de  # Email to which notifications will be sent
 
 # print info about current job
 scontrol show job $SLURM_JOB_ID 
@@ -26,6 +26,7 @@ exec_command="singularity exec --nv --bind $data_path $sif_path"
 
 
 ## GTA pretraining for Cityscapes
+$echo "Pretraining for Cityscapes"
 $exec_command python3 $code_path/train_supervised.py --exp-name 'gta_pretraining_cs' --checkpointer \
 --ckpt-path $ckpt_path --data-path $data_path \
 --input-size 256 512 --dataset 'gta' \
@@ -33,6 +34,7 @@ $exec_command python3 $code_path/train_supervised.py --exp-name 'gta_pretraining
 --test --snapshot 'best_jaccard_val.pth'
 
 ## Pretraining GTA + Cityscapes D_t (lower bound, what is used as a starting point for the active learning algorithm)
+$echo "Pretraining GTA + Cityscapes D_t (lower bound, what is used as a starting point for the active learning algorithm)"
 $exec_command python3 $code_path/train_supervised.py --exp-name 'cityscapes_pretrained_dt' --checkpointer \
 --ckpt-path $ckpt_path --data-path $data_path \
 --load-weights --exp-name-toload 'gta_fpn_baseline_lr1e-3_fullres_finetune' \
@@ -41,6 +43,7 @@ $exec_command python3 $code_path/train_supervised.py --exp-name 'cityscapes_pret
 --test --snapshot 'best_jaccard_val.pth'
 
 #Upper bound Cityscapes
+$echo "Upper bound Cityscapes"
 $exec_command python3 $code_path/train_supervised.py --exp-name 'cityscapes_upperbound' --checkpointer \
 --ckpt-path $ckpt_path --data-path $data_path \
 --load-weights --exp-name-toload 'gta_fpn_baseline_lr1e-3_fullres_finetune' \
@@ -49,6 +52,7 @@ $exec_command python3 $code_path/train_supervised.py --exp-name 'cityscapes_uppe
 --test --snapshot 'best_jaccard_val.pth'
 
 ## GTA pretraining for Camvid
+$echo "GTA pretraining for Camvid"
 $exec_command python3 $code_path/train_supervised.py --exp-name 'gta_pretraining_camvid' --checkpointer \
 --ckpt-path $ckpt_path --data-path $data_path \
 --input-size 224 224 --dataset 'gta_for_camvid' \
@@ -56,6 +60,7 @@ $exec_command python3 $code_path/train_supervised.py --exp-name 'gta_pretraining
 --test --snapshot 'best_jaccard_val.pth'
 
 ## Pretraining GTA + Camvid D_t (lower bound, what is used as a starting point for the active learning algorithm)
+$echo "Pretraining GTA + Camvid D_t (lower bound, what is used as a starting point for the active learning algorithm)"
 $exec_command python3 $code_path/train_supervised.py --exp-name 'camvid_pretrained_dt' --checkpointer \
 --ckpt-path $ckpt_path --data-path $data_path \
 --load-weights --exp-name-toload 'gta_pretraining_camvid' \
@@ -64,6 +69,7 @@ $exec_command python3 $code_path/train_supervised.py --exp-name 'camvid_pretrain
 --test --snapshot 'best_jaccard_val.pth'
 
 ## Upper bound Camvid
+$echo "Upper bound Camvid"
 $exec_command python3 $code_path/train_supervised.py --exp-name 'camvid_upperbound' --checkpointer \
 --ckpt-path $ckpt_path --data-path $data_path \
 --load-weights --exp-name-toload 'gta_pretraining_camvid' \

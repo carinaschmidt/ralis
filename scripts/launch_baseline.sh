@@ -3,6 +3,7 @@
 ckpt_path='/home/casanova/scratch/ckpt_seg'
 data_path='/home/casanova/scratch/'
 
+#baseline U: uniform random sampling of the regions to label at each step out of all possible regions in the pool
 for al_algorithm in 'random'
     do
     for budget in 1920 3840 7680 11520 19200 30720
@@ -18,6 +19,7 @@ for al_algorithm in 'random'
         done
     done
 
+#baseline H: uncertainty sampling method that selects the regions with maximum cumulative pixel-wise Shannon entropy
 for al_algorithm in 'entropy'
     do
     for budget in 1920 3840 7680 11520 19200 30720
@@ -33,6 +35,7 @@ for al_algorithm in 'entropy'
         done
     done
 
+#baseline B: picks regions with maximum cumulative pixel-wise BALD metric
 for al_algorithm in 'bald'
     do
     for budget in 1920 3840 7680 11520 19200 30720

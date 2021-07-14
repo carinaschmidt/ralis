@@ -3,12 +3,12 @@ import os
 from copy import deepcopy
 
 import numpy as np
-from PIL import Image
+import torch
 from torch.utils import data
 
-num_classes = 11
-ignore_label = 11
-path = 'camvid'
+num_classes = 4
+ignore_label = 4
+path = 'acdc'
 palette = [128, 128, 128, 128, 0, 0, 192, 192, 128, 128, 64, 128, 0, 0, 192, 128, 128, 0, 192, 128, 128, 64, 64, 128,
            64, 0, 128, 64, 64, 0, 0, 128, 192, 0, 0, 0]
 zero_pad = 256 * 3 - len(palette)
@@ -16,39 +16,40 @@ for i in range(zero_pad):
     palette.append(0)
 
 
-def colorize_mask(mask):
-    # mask: numpy array of the mask
-    new_mask = Image.fromarray(mask.astype(np.uint8)).convert('P')
-    new_mask.putpalette(palette)
-    return new_mask
+# def colorize_mask(mask):
+#     # mask: numpy array of the mask
+#     new_mask = Image.fromarray(mask.astype(np.uint8)).convert('P')
+#     new_mask.putpalette(palette)
+#     return new_mask
 
 
 def make_dataset(mode, root):
     if mode == "train":
-        img_path = os.path.join(root, "train")
-        mask_path = os.path.join(root, "trainannot")
+        # img_path='/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/train'
+        img_path = os.path.join(root, "slices", "train")
+        mask_path = os.path.join(root, "gt", "train")
     elif mode == "val":
-        img_path = os.path.join(root, "val")
-        mask_path = os.path.join(root, "valannot")
+        img_path = os.path.join(root, "slices", "val")
+        mask_path = os.path.join(root, "gt", "val")
     elif mode == "test":
-        img_path = os.path.join(root, "test")
-        mask_path = os.path.join(root, "testannot")
+        img_path = os.path.join(root, "slices", "test")
+        mask_path = os.path.join(root, "gt", "test")
     else:
         raise ValueError('Dataset split specified does not exist!')
-    # list with '/mnt/qb/baumgartner/cschmidt77_data/camvid/train/0016E5_08640.png',..
-    img_paths = [f for f in glob.glob(os.path.join(img_path, "*.png"))]
+    # list with img paths '/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/train/pat_9_diag_2_frame_13_slice_9_size_(256, 256)_res_(256, 256).png'
+    img_paths = [f for f in glob.glob(os.path.join(img_path, "*.npy"))]
     items = []
-    # im_p '/mnt/qb/baumgartner/cschmidt77_data/camvid/train/0001TP_006690.png'
+    # im_p '/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/train/pat_10_diag_2_frame_01_slice_0_size_(256, 256)_res_(256, 256).png'
     for im_p in img_paths:
-        #item: im_p ('/mnt/qb/baumgartner/cschmidt77_data/camvid/train/0001TP_006690.png', 
-        # '/mnt/qb/baumgartner/cschmidt77_data/camvid/trainannot/0001TP_006690.png', 
-        # '0001TP_006690.png')
+        # item: ('/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/train/pat_10_diag_2_frame_01_slice_0_size_(256, 256)_res_(256, 256).png', 
+        # '/mnt/qb/baumgartner/cschmidt77_data/acdc/gt/train/pat_10_diag_2_frame_01_slice_0_size_(256, 256)_res_(256, 256).png', 
+        # 'pat_10_diag_2_frame_01_slice_0_size_(256, 256)_res_(256, 256).png')
         item = (im_p, os.path.join(mask_path, im_p.split('/')[-1]), im_p.split('/')[-1])
         items.append(item)
     return items
 
 
-class Camvid_al(data.Dataset):
+class ACDC_al(data.Dataset):
     def __init__(self, quality, mode, data_path='', code_path='', joint_transform=None,
                  sliding_crop=None, transform=None, target_transform=None, candidates_option=False,
                  region_size=(80, 90),
@@ -57,6 +58,7 @@ class Camvid_al(data.Dataset):
         self.num_classes = num_classes
         self.ignore_label = ignore_label
         self.root = data_path + path
+        print('in ACDC_al class')
         self.imgs = make_dataset(mode, self.root)
         if len(self.imgs) == 0:
             raise RuntimeError('Found 0 images, please check the data set')
@@ -68,22 +70,29 @@ class Camvid_al(data.Dataset):
         self.target_transform = target_transform
 
         splits = np.load(
-            os.path.join(code_path, 'data/camvid_al_splits.npy'), 
+            os.path.join(code_path, 'data/acdc_pat_img_splits.npy'),#'data/acdc_al_splits.npy'), 
             allow_pickle=True
             ).item()
-        self.state_subset = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_s'])]
+
+        # img[0] is full path to image
+        self.state_subset = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_s'])]    
         self.state_subset_regions = {}
+
+        # len(splits['d_s']) is 36
         for i in range(len(splits['d_s'])):
-            x_r1 = np.arange(0, 480 - region_size[0] + 1, region_size[0])
-            y_r1 = np.arange(0, 360 - region_size[1] + 1, region_size[1])
+            # region_size is here [80,90]
+            x_r1 = np.arange(0, 256 - region_size[0] + 1, region_size[0]) #array([  0,  64, 128, 192]) 
+            y_r1 = np.arange(0, 256 - region_size[1] + 1, region_size[1])
             self.state_subset_regions.update({i: np.array(np.meshgrid(x_r1, y_r1)).T.reshape(-1, 2)})
 
         if split == 'train':
             self.imgs = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_t'])]
+            print("Using d_t")
         elif split == 'test':
+            print("Using d_v")
             self.imgs = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_v'])]
 
-        print('Using ' + str(split) + ' splitting of ' + str(len(self.imgs)) + ' images.')
+        print('Using ' + str(split) + ' splitting of ' + str(len(self.imgs)) + ' images for mode:' + self.mode)
 
         self.end_al = False
         self.balance_cl = []
@@ -93,31 +102,53 @@ class Camvid_al(data.Dataset):
         self.selected_regions = dict()
         self.list_regions = []
         self.num_imgs = len(self.imgs)
-        splitters_x = np.arange(0, 480 - region_size[0] + 1, region_size[0])
-        splitters_y = np.arange(0, 360 - region_size[1] + 1, region_size[1])
-        splitters_mesh = np.array(np.meshgrid(splitters_y, splitters_x)).T.reshape(-1, 2)
+        splitters_x = np.arange(0, 256 - region_size[0] + 1, region_size[0]) #array([  0,  64, 128, 192])
+        splitters_y = np.arange(0, 256 - region_size[1] + 1, region_size[1]) ##array([  0,  64, 128, 192])
+        splitters_mesh = np.array(np.meshgrid(splitters_y, splitters_x)).T.reshape(-1, 2) #array([[  0,   0],
         prov_splitters = splitters_mesh.copy()
         prov_splitters_x = list(prov_splitters[:, 1])
         prov_splitters_y = list(prov_splitters[:, 0])
         self.unlabeled_regions_x = [deepcopy(prov_splitters_x) for _ in range(self.num_imgs)]
         self.unlabeled_regions_y = [deepcopy(prov_splitters_y) for _ in range(self.num_imgs)]
-        self.num_unlabeled_regions_total = (360 * 480) // (
-                region_size[0] * region_size[1]) * self.num_imgs
-        self.region_size = region_size
+        #self.num_unlabeled_regions_total = (256 * 256) // (  #3040
+        #        region_size[0] * region_size[1]) * self.num_imgs
+        self.num_unlabeled_regions_total = (256 // region_size[1]) * (256 // region_size[0]) * self.num_imgs
+        print('Number of unlabeled regions total: ', self.num_unlabeled_regions_total) #@carina
+        self.region_size = region_size #[64,64]
 
     def get_subset_state(self, index):
         img_path, mask_path, im_name = self.state_subset[index]
-        img, mask = Image.open(img_path).convert('RGB'), Image.open(mask_path)
-        
+        # @carina added 
+        #import ipdb
+        #ipdb.set_trace()
+        #img, mask = np.stack((np_img,)*3, axis=-1), np.load(mask_path)
+        img, mask = np.load(img_path), np.load(mask_path)
+        img, mask = torch.from_numpy(img), torch.from_numpy(mask)
+
         if self.joint_transform is not None:
+            #img =np_img #@carina to maybe avoid shape error
             img, mask = self.joint_transform(img, mask)
         if self.transform is not None:
-            img = self.transform(img)
+            if type(img) != torch.Tensor:
+                img = self.transform(img) #self.transforms transforms ToTensor!! but ToTensor returns image (0-255)
+            #img = torch.from_numpy(img)           
+            #img.shape: torch.Size([3, 256, 256])
+            #norm_img = normalise_image(img)
+            #img = np.stack((norm_img,)*3, axis=-1)  #@carina added to meet correct shape 
+            #img = torch.from_numpy(img)
+            #img = img.permute((2, 0, 1)).contiguous() #torch.Size([256, 256, 3])
+            #print("type of img: ", type(img))
         if self.target_transform is not None:
-            mask = self.target_transform(mask)
+            mask = self.target_transform(mask) #after transform: torch.Size([256, 256])
+        #img = np.stack((img,)*3, axis=-1) 
+        img = torch.stack((img, img, img), dim=0)
+        #import ipdb
+        #ipdb.set_trace()
         return img, mask, None, (img_path, mask_path, im_name), self.state_subset_regions[index]
 
     def __getitem__(self, index):
+        #import ipdb
+        #ipdb.set_trace()
         # Train with all labeled images, selecting a random region per image, and doing the random crop around it
         if self.candidates or self.end_al:
             img_path, mask_path, im_name = self.imgs[self.selected_images[index]]
@@ -135,23 +166,43 @@ class Camvid_al(data.Dataset):
             img_path, mask_path, im_name = self.imgs[selected[0]]
             selected_region = selected[1]
 
-        img, mask = Image.open(img_path).convert('RGB'), Image.open(mask_path)
-        mask = np.array(mask)
-
+        #img, mask = Image.open(img_path).convert('RGB'), Image.open(mask_path)
+        #@carina
+        #np_img = np.load(img_path)
+        img, mask = np.load(img_path), np.load(mask_path)
+        img = torch.from_numpy(img)
+    
         if not self.candidates:
             mask = self.maskout_unselected_regions(mask, selected[0], self.region_size)
-
-        mask = Image.fromarray(mask.astype(np.uint8))
+            
+        #@carina
+        #mask = Image.fromarray(mask.astype(np.uint8))
+        mask = torch.from_numpy(mask)
         if self.joint_transform is not None:
             if not self.candidates:
+                #img, mask = torch.from_numpy(img), torch.from_numpy(mask)
                 img, mask = self.joint_transform(img, mask, selected_region)
             else:
+                #img, mask = torch.from_numpy(img), torch.from_numpy(mask)
                 img, mask = self.joint_transform(img, mask)
 
         if self.transform is not None:
-            img = self.transform(img)
+            #img = np.stack((img,)*3, axis=-1) #@carina added to meet correct shape 
+            #img = self.transform(img)
+            #norm_img = normalise_image(img)
+            #img = np.stack((img,)*3, axis=-1)  #@carina added to meet correct shape 
+            if type(img) != torch.Tensor:
+                img = self.transform(img) #self.transforms transforms ToTensor!! 
+            #img = torch.from_numpy(img)
+            #img = img.permute((2, 0, 1)).contiguous() #torch.Size([256, 256, 3])
         if self.target_transform is not None:
-            mask = self.target_transform(mask)
+            mask = self.target_transform(mask) #mask to tensor
+
+        img = torch.stack((img, img, img), dim=0)
+        #print("img shape ACDC_al getitem: ", img.shape)
+        #print("mask shape ACDC_al getitem: ", mask.shape)
+        #import ipdb
+        #ipdb.set_trace()
         return img, mask, (img_path, mask_path, im_name), selected_region[0] if not self.candidates else \
             self.selected_images[index], 0
 
@@ -168,15 +219,31 @@ class Camvid_al(data.Dataset):
     def get_specific_item(self, path):
         img_path, mask_path, im_name = self.imgs[path]
         cost_img = None
-        img, mask = Image.open(img_path).convert('RGB'), Image.open(mask_path)
+        #@carina
+        #img, mask = Image.open(img_path).convert('RGB'), Image.open(mask_path)
+        #np_img = np.load(img_path)
+        img, mask = np.load(img_path), np.load(mask_path)
+        img, mask = torch.from_numpy(img), torch.from_numpy(mask)
 
         if self.joint_transform is not None:
             img, mask = self.joint_transform(img, mask)
 
-        if self.transform is not None:
-            img = self.transform(img)
+        if self.transform is not None:  #self.transform calls torchvision transforms transforms.py
+            #import ipdb
+            #ipdb.set_trace()
+            #norm_img = normalise_image(img)
+            #img = np.stack((img,)*3, axis=-1)  #@carina added to meet correct shape 
+            if type(img) != torch.Tensor:
+                img = self.transform(img) #self.transforms transforms ToTensor!! 
+            #img = self.transform(img) #torch.Size([3, 256, 256])
+            #img = torch.from_numpy(img)  #torch.Size([256, 256, 3])
+            #img = img.permute((2, 0, 1)).contiguous() #torch.Size([256, 256, 3])
         if self.target_transform is not None:
             mask = self.target_transform(mask)
+        #img = np.stack((img,)*3, axis=-1)
+        img = torch.stack((img, img, img), dim=0)
+        # print("img shape ACDC_al getSpecitem: ", img.shape)
+        # print("mask shape ACDC_al getSpecitem: ", mask.shape)
         return img, mask, cost_img, (img_path, mask_path, im_name)
 
     def __len__(self):
@@ -230,7 +297,6 @@ class Camvid_al(data.Dataset):
         unlabeled_regions = 0
         candidates = []
         images_list = list(range(self.num_imgs))
-        print("Length of the image list to get_candidates from: ", len(images_list))
         while unlabeled_regions <= num_regions_unlab:
             if len(images_list) == 0:
                 raise ValueError('There is no more unlabeled regions to fullfill the amount we want!')
@@ -244,8 +310,9 @@ class Camvid_al(data.Dataset):
 
     def check_class_region(self, img, region, region_size=(128, 120), eps=1E-7):
         img_path, mask_path, im_name = self.imgs[img]
-        mask = Image.open(mask_path)
-        mask = np.array(mask)
+        #mask = Image.open(mask_path)
+        mask = np.load(mask_path)
+        #mask = np.array(mask)
         r_x = int(region[1])
         r_y = int(region[0])
         region_classes = mask[r_x: r_x + region_size[1], r_y: r_y + region_size[0]]

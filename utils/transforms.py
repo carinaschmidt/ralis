@@ -41,6 +41,7 @@ class FreeScale(object):
 class FlipChannels(object):
     def __call__(self, img):
         img = np.array(img)[:, :, ::-1]
+        torch.from_numpy(img)
         return Image.fromarray(img.astype(np.uint8))
 
 

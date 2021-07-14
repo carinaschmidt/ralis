@@ -1,3 +1,4 @@
+import glob
 import os
 
 import numpy as np
@@ -5,9 +6,9 @@ import torch
 from PIL import Image
 from torch.utils import data
 
-num_classes = 19
-ignore_label = 19
-path = 'cityscapes'
+num_classes = 4
+ignore_label = 4
+path = 'acdc'
 palette = [128, 64, 128, 244, 35, 232, 70, 70, 70, 102, 102, 156, 190, 153,
            153, 153, 153, 153, 250, 170, 30,
            220, 220, 0, 107, 142, 35, 152, 251, 152, 70, 130, 180, 220, 20, 60,
@@ -17,53 +18,46 @@ zero_pad = 256 * 3 - len(palette)
 for i in range(zero_pad):
     palette.append(0)
 
-
-def colorize_mask(mask):
-    # mask: numpy array of the mask
-    new_mask = Image.fromarray(mask.astype(np.uint8)).convert('P')
-    new_mask.putpalette(palette)
-    return new_mask
+# def colorize_mask(mask):
+#     # mask: numpy array of the mask
+#     new_mask = Image.fromarray(mask.astype(np.uint8)).convert('P')
+#     new_mask.putpalette(palette)
+#     return new_mask
 
 
 def make_dataset(quality, mode, root):
-    assert (quality == 'fine' and mode in ['train', 'val']) or \
-           (quality == 'coarse' and mode in ['train', 'train_extra', 'val'])
-
-    if quality == 'coarse':
-        img_dir_name = 'leftImg8bit_trainextra' if mode == 'train_extra' \
-            else 'leftImg8bit_trainvaltest'
-        mask_path = os.path.join(root, 'gtCoarse', 'gtCoarse', mode)
-        mask_postfix = '_gtCoarse_labelIds.png'
+    if mode == "train":
+        # img_path='/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/train'
+        img_path = os.path.join(root, "slices", "train")
+        mask_path = os.path.join(root, "gt", "train")
+    elif mode == "val":
+        img_path = os.path.join(root, "slices", "val")
+        mask_path = os.path.join(root, "gt", "val")
+    elif mode == "test":
+        img_path = os.path.join(root, "slices", "test")
+        mask_path = os.path.join(root, "gt", "test")
     else:
-        img_dir_name = ''
-        mask_path = os.path.join(root, '', 'gtFine', mode)
-        mask_postfix = '_gtFine_labelIds.png'
-    img_path = os.path.join(root, img_dir_name, 'leftImg8bit', mode)
-
-    categories = os.listdir(img_path)
-    categories.sort()
-    categories_m = os.listdir(mask_path)
-    categories_m.sort()
-
-    assert categories == categories_m
+        raise ValueError('Dataset split specified does not exist!')
+    # list with img paths '/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/train/pat_9_diag_2_frame_13_slice_9_size_(256, 256)_res_(256, 256).png'
+    img_paths = [f for f in glob.glob(os.path.join(img_path, "*.npy"))]
     items = []
-
-    for c in categories:
-        c_items = [name.split('_leftImg8bit.png')[0] for name in
-                   os.listdir(os.path.join(img_path, c))]
-        for it in c_items:
-            item = (os.path.join(img_path, c, it + '_leftImg8bit.png'),
-                    os.path.join(mask_path, c, it + mask_postfix), it)
-            items.append(item)
+    # im_p '/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/train/pat_10_diag_2_frame_01_slice_0_size_(256, 256)_res_(256, 256).png'
+    for im_p in img_paths:
+        # item: ('/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/train/pat_10_diag_2_frame_01_slice_0_size_(256, 256)_res_(256, 256).png', 
+        # '/mnt/qb/baumgartner/cschmidt77_data/acdc/gt/train/pat_10_diag_2_frame_01_slice_0_size_(256, 256)_res_(256, 256).png', 
+        # 'pat_10_diag_2_frame_01_slice_0_size_(256, 256)_res_(256, 256).png')
+        item = (im_p, os.path.join(mask_path, im_p.split('/')[-1]), im_p.split('/')[-1])
+        items.append(item)
     return items
 
 
-class CityScapes_al_splits(data.Dataset):
+class ACDC_al_splits(data.Dataset):
     def __init__(self, quality, mode, data_path='', code_path='', joint_transform=None,
                  sliding_crop=None, transform=None, target_transform=None, supervised=False, subset=False):
         self.num_classes = num_classes
         self.ignore_label = ignore_label
         self.root = data_path + path
+        print('in ACDC_al_splits class')
         self.imgs = make_dataset(quality, mode, self.root)
         if len(self.imgs) == 0:
             raise RuntimeError('Found 0 images, please check the data set')
@@ -88,30 +82,36 @@ class CityScapes_al_splits(data.Dataset):
 
         # item() gives dictionary inside array with the four splits as keys
         splits = np.load(
-            os.path.join(code_path, 'data/cityscapes_al_splits.npy'), allow_pickle=True
+            os.path.join(code_path, 'data/acdc_pat_img_splits.npy'), allow_pickle=True
             ).item()
+        # import ipdb
+        # ipdb.set_trace()
         # d_t
         if subset:
-            self.imgs = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_t'])]
+            self.imgs = [img for i, img in enumerate(self.imgs) if (img[0] in splits['d_t'])]
         else:
             # d_t + d_v
             if supervised:
                 self.imgs = [img for i, img in enumerate(self.imgs) if
-                             (img[-1] in splits['d_t'] or img[-1] in splits['d_v'])]
+                             (img[0] in splits['d_t'] or img[0] in splits['d_v'])]
 
             # d_r
-            else:
-                self.imgs = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_r'])]
+            else: #in imgs: '/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/val/pat_99_diag_4_frame_09_slice_6.npy', '/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/val/pat_99_diag_4_frame_09_slice_7.npy', '/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/val/pat_99_diag_4_frame_09_slice_8.npy', '/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/val/pat_99_diag_4_frame_09_slice_9.npy'
+                self.imgs = [img for i, img in enumerate(self.imgs) if (img in splits['d_r'])] #in d_r: '/mnt/qb/baumgartner/cschmidt77_data/acdc/slices/val/pat_99_diag_4_frame_09_slice_8.npy'
         print('Using splitting of ' + str(len(self.imgs)) + ' images.')
 
     def __getitem__(self, index):
         img_path, mask_path, im_name = self.imgs[index]
-        img, mask = Image.open(img_path).convert('RGB'), Image.open(mask_path)
-        mask = np.array(mask)
+        img, mask = np.load(img_path), np.load(mask_path) 
+        #img_stacked = np.stack((img,)*3, axis=-1)
+
         mask_copy = mask.copy()
         for k, v in self.id_to_trainid.items():
             mask_copy[mask == k] = v
-        mask = Image.fromarray(mask_copy.astype(np.uint8))
+        # import ipdb
+        # ipdb.set_trace()
+        #@carina 
+        #img, mask = Image.fromarray(img_stacked.astype(np.uint8)), Image.fromarray(mask.astype(np.uint8))
 
         if self.joint_transform is not None:
             img, mask = self.joint_transform(img, mask)
@@ -128,6 +128,7 @@ class CityScapes_al_splits(data.Dataset):
                 img = self.transform(img)
             if self.target_transform is not None:
                 mask = self.target_transform(mask)
+            mask = np.stack((img,)*3, axis=-1)
             return img, mask, (img_path, mask_path, im_name)
 
     def __len__(self):

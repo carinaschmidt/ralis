@@ -105,7 +105,8 @@ def main(args):
 
     if args.train:
         print('Starting training...')
-        scheduler = ExponentialLR(optimizer, gamma=0.998)
+        #@carina scheduler off
+        #scheduler = ExponentialLR(optimizer, gamma=0.998)
         net.train()
         for epoch in range(curr_epoch, args.epoch_num + 1):
             print('Epoch %i /%i' % (epoch, args.epoch_num + 1))
@@ -124,7 +125,8 @@ def main(args):
             for cl in range(train_loader.dataset.num_classes):
                 info.append(iu_xclass[cl])
             logger.append(info)
-            scheduler.step()
+            #@carina scheduler off
+            #scheduler.step()
             # Early stopping with val jaccard
             es_counter += 1
             if val_iu > es_val and not math.isnan(val_iu):

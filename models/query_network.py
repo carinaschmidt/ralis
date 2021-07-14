@@ -6,17 +6,17 @@ import torch.nn.functional as F
 class QueryNetworkDQN(nn.Module):
     def __init__(self, indexes_full_state=10 * 128, input_size=38, input_size_subset=38, sim_size=64):
         super(QueryNetworkDQN, self).__init__()
-        self.conv1_s = nn.Conv1d(input_size_subset, 256, 1)
+        self.conv1_s = nn.Conv1d(input_size_subset, 256, 1) #for ACDC: input_size_subset=198
         self.bn1_s = nn.BatchNorm1d(input_size_subset)
         self.conv2_s = nn.Conv1d(256, 128, 1)
         self.bn2_s = nn.BatchNorm1d(256)
         self.conv3_s = nn.Conv1d(128, 1, 1)
         self.bn3_s = nn.BatchNorm1d(128)
 
-        self.linear_s = nn.Linear(indexes_full_state, 128)
-        self.bn_last_s = nn.BatchNorm1d(int(indexes_full_state))
+        self.linear_s = nn.Linear(indexes_full_state, 128) #indexes_full_state = 160
+        self.bn_last_s = nn.BatchNorm1d(int(indexes_full_state)) #indexes_full_state = 160
 
-        self.conv1 = nn.Conv1d(input_size, 512, 1)
+        self.conv1 = nn.Conv1d(input_size, 512, 1) #for ACDC: input_size_subset=198
         self.bn1 = nn.BatchNorm1d(input_size)
         self.conv2 = nn.Conv1d(512, 256, 1)
         self.bn2 = nn.BatchNorm1d(512)
@@ -54,4 +54,4 @@ class QueryNetworkDQN(nn.Module):
         # Compute Q(s,a)
         out = torch.cat([x, sub], dim=1)
         out = self.conv_final2(self.bn_final(out))
-        return (F.sigmoid(bias) * out.transpose(1, 2)).view(out.size()[0], -1)
+        return (torch.sigmoid(bias) * out.transpose(1, 2)).view(out.size()[0], -1)  #@carina changed from F.sigmoid to torch.sigmoid

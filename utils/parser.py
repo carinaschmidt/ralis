@@ -4,6 +4,8 @@ import os
 ckpt_path = '/home/baumgartner/cschmidt77/ckpt_seg'
 data_path = '/mnt/qb/baumgartner/cschmidt77_data'
 code_path = '/home/baumgartner/cschmidt77/devel/ralis'
+#run locally
+#code_path = '/home/carina/baumgartner/cschmidt77/devel/ralis'
 
 
 def get_arguments():
@@ -12,7 +14,6 @@ def get_arguments():
       A list of parsed arguments.
     """
     parser = argparse.ArgumentParser(description="Reinforced active learning for image segmentation")
-
     parser.add_argument("--ckpt-path", type=str, default=ckpt_path,
                         help="Path to store weights, logs and"
                              " other experiment related files.")
@@ -87,10 +88,9 @@ def get_arguments():
     parser.add_argument("--al-algorithm", type=str, default='random',
                         choices=['random', 'entropy', 'bald', 'ralis'],
                         help=" Which metric to choose samples for active learning.")
-
     parser.add_argument("--dataset", type=str, default='cityscapes',
                         choices=['camvid', 'camvid_subset', 'cityscapes', 'cityscapes_subset',
-                                 'cs_upper_bound', 'gta', 'gta_for_camvid'])
+                                 'cs_upper_bound', 'gta', 'gta_for_camvid', 'acdc_unnormalised', 'acdc'])
 
     parser.add_argument("--budget-labels", type=int, default=100)
     parser.add_argument("--num-each-iter", type=int, default=1)  ## Number of regions to label every AL epoch

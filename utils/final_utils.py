@@ -11,7 +11,9 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 
 import utils.transforms as extended_transforms
-from data import cityscapes, camvid
+import utils.joint_transforms_acdc as joint_transforms_acdc
+import utils.transforms_acdc as extended_transforms_acdc
+from data import cityscapes, camvid, acdc
 from utils.logger import Logger
 from utils.progressbar import progress_bar
 
@@ -118,11 +120,16 @@ def set_training_stage(args, stage):
 
 
 def evaluate(cm):
-    # Compute metrics
+    #import ipdb
+    #ipdb.set_trace() 
+    # after a few episodes cm will get more and more 0s, jaccard_perclass becomes 0 !
+    # Compute metrics 
+    #@carina  diagonal elements show the number of correct classifications for each class, if 0: no correct classifications!
     TP_perclass = cm.diagonal().astype('float32')
-    jaccard_perclass = TP_perclass / (cm.sum(1) + cm.sum(0) - TP_perclass)
+    #jaccard_perclass = TP_perclass / (cm.sum(1) + cm.sum(0) - TP_perclass)
+    jaccard_perclass = np.divide(TP_perclass, (cm.sum(1) + cm.sum(0) - TP_perclass))  #overlap (true predictions, intersection) / union
     jaccard = np.mean(jaccard_perclass)
-    accuracy = TP_perclass.sum() / cm.sum()
+    accuracy = TP_perclass.sum() / cm.sum()  #diagonal: correct predicted / all predictions
 
     return accuracy, jaccard, jaccard_perclass
 
@@ -155,8 +162,9 @@ def compute_set_jacc(val_loader, net):
             outputs = outputs[:, :, 0:min(outputs.shape[2], gts_.shape[1]), 0:min(outputs.shape[3], gts_.shape[2])]
             gts_ = gts_[:, 0:min(outputs.shape[2], gts_.shape[1]), 0:min(outputs.shape[3], gts_.shape[2])]
         predictions_py = outputs.data.max(1)[1].squeeze_(1)
-
-        cm_py = confusion_matrix_pytorch(cm_py, predictions_py.view(-1),
+        #import ipdb 
+        #ipdb.set_trace()
+        cm_py = confusion_matrix_pytorch(cm_py, predictions_py.view(-1),        #contains TP, TN, FP, FN.. from target and predicted values
                                          gts_.cuda().view(-1),
                                          val_loader.dataset.num_classes)
 
@@ -168,6 +176,8 @@ def compute_set_jacc(val_loader, net):
 
 
 def train(train_loader, net, criterion, optimizer, supervised=False):
+    #import ipdb
+    #ipdb.set_trace()
     net.train()
     train_loss = 0
     cm_py = torch.zeros((train_loader.dataset.num_classes, train_loader.dataset.num_classes)).type(
@@ -175,16 +185,19 @@ def train(train_loader, net, criterion, optimizer, supervised=False):
     for i, data in enumerate(train_loader):
         optimizer.zero_grad()
         if supervised:
-            im_s, t_s_, _ = data
-        else:
-            im_s, t_s_, _, _, _ = data
+            im_s, t_s_, _ = data    
 
-        t_s, im_s = Variable(t_s_).cuda(), Variable(im_s).cuda()
+        else:
+            im_s, t_s_, _, _, _ = data   #im_s.shape: torch.Size([16, 256, 256, 3]), t_s_: torch.Size([16, 256, 256]), #t_s_.unique(): tensor([0, 1, 2, 3, 4])
+
+        t_s, im_s = Variable(t_s_).cuda(), Variable(im_s).cuda()  #t_s.shape: torch.Size([32 (batch size), 190, 190 (input size)]), dtype torch.uint8 ipdb> im_s.shape torch.Size([32, 3, 190, 190]) torch.float32
         # Get output of network
-        outputs, _ = net(im_s)
+        # im_s has shape: torch.Size([32, 3, 190, 190]), after net(im_s): torch.Size([32, 4, 192, 192])
+        outputs, _ = net(im_s) #outputs.shape: torch.Size([32, 4, 192, 192])!!!, net is FPNoup,  ipdb> outputs.min(), outputs.max() (tensor(-0.1807, device='cuda:0', grad_fn=<MinBackward1>), tensor(0.4315, device='cuda:0', grad_fn=<MaxBackward1>))
         # Get segmentation maps
         predictions_py = outputs.data.max(1)[1].squeeze_(1)
-        loss = criterion(outputs, t_s)
+        loss = criterion(outputs, t_s) #changed by @carina (outputs to predictions_py) outputs are torch.float32, t_s are uint8: outputs [5,4,180,180], t_s [5,180,180]
+        #loss = criterion(predictions_py, t_s)
         train_loss += loss.item()
 
         loss.backward()
@@ -202,6 +215,8 @@ def train(train_loader, net, criterion, optimizer, supervised=False):
         del (loss)
         gc.collect()
     print(' ')
+    #import ipdb
+    #ipdb.set_trace()
     acc, mean_iu, iu = evaluate(cm_py.cpu().numpy())
     print(' [train acc %.5f], [train iu %.5f]' % (
         acc, mean_iu))
@@ -214,17 +229,21 @@ def validate(val_loader, net, criterion, optimizer, epoch, best_record, args, fi
     val_loss = 0
     cm_py = torch.zeros((val_loader.dataset.num_classes, val_loader.dataset.num_classes)).type(
         torch.IntTensor).cuda()
+    # import ipdb
+    # ipdb.set_trace() 
     for vi, data in enumerate(val_loader):
-        inputs, gts_, _ = data
+        inputs, gts_, _ = data #inputs.shape = torch.Size([1, 3, 256, 256]), gts_.shape: torch.Size([1, 256, 256])
+
         with torch.no_grad():
             inputs = Variable(inputs).cuda()
             gts = Variable(gts_).cuda()
-        outputs, _ = net(inputs)
+        outputs, _ = net(inputs) #outputs.shape: torch.Size([1, 4, 256, 256])
+
         # Make sure both output and target have the same dimensions
-        if outputs.shape[2:] != gts.shape[1:]:
-            outputs = outputs[:, :, 0:min(outputs.shape[2], gts.shape[1]), 0:min(outputs.shape[3], gts.shape[2])]
-            gts = gts[:, 0:min(outputs.shape[2], gts.shape[1]), 0:min(outputs.shape[3], gts.shape[2])]
-        predictions_py = outputs.data.max(1)[1].squeeze_(1)
+        if outputs.shape[2:] != gts.shape[1:]:   ##gts.shape torch.Size([1, 256, 256])
+            outputs = outputs[:, :, 0:min(outputs.shape[2], gts.shape[1]), 0:min(outputs.shape[3], gts.shape[2])] 
+            gts = gts[:, 0:min(outputs.shape[2], gts.shape[1]), 0:min(outputs.shape[3], gts.shape[2])] 
+        predictions_py = outputs.data.max(1)[1].squeeze_(1)  #ipdb> predictions_py.shape: torch.Size([1, 256, 256])
         loss = criterion(outputs, gts)
         vl_loss = loss.item()
         val_loss += (vl_loss)
@@ -263,9 +282,16 @@ def validate(val_loader, net, criterion, optimizer, epoch, best_record, args, fi
                                     'opt_best_jaccard_val.pth'))
 
         ## Save checkpoint every epoch
+        #@carina will be overwritten
         torch.save(net.cpu().state_dict(),
                    os.path.join(args.ckpt_path, args.exp_name,
                                 'last_jaccard_val.pth'))
+
+        # save model every 50 epochs
+        if epoch % 50 == 0:
+            torch.save(net.cpu().state_dict(),
+                os.path.join(args.ckpt_path, args.exp_name,
+                            'jaccard_val_epoch{}.pth'.format(epoch)))
         net.cuda()
         torch.save(optimizer.state_dict(),
                    os.path.join(args.ckpt_path, args.exp_name,
@@ -277,7 +303,8 @@ def validate(val_loader, net, criterion, optimizer, epoch, best_record, args, fi
                                  best_record['mean_iu'], best_record['epoch']))
 
     print('----------------------------------------')
-
+    #import ipdb
+    #ipdb.set_trace()
     return val_loss / len(val_loader), acc, mean_iu, iu, best_record
 
 
@@ -335,11 +362,18 @@ def final_test(args, net, criterion):
 
     # Prepare data transforms
     mean_std = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    input_transform = standard_transforms.Compose([
-        standard_transforms.ToTensor(),
-        standard_transforms.Normalize(*mean_std)
-    ])
-    target_transform = extended_transforms.MaskToTensor()
+    if 'acdc' in args.dataset:
+        #@carina added
+        input_transform = standard_transforms.Compose([
+            extended_transforms_acdc.ImageToTensor()
+        ])
+        target_transform = extended_transforms_acdc.MaskToTensor()
+    else:
+        input_transform = standard_transforms.Compose([
+            standard_transforms.ToTensor(),
+            standard_transforms.Normalize(*mean_std)
+        ])
+        target_transform = extended_transforms.MaskToTensor()
 
     if 'camvid' in args.dataset:
         val_set = camvid.Camvid('fine', 'test' if test else 'val',
@@ -350,7 +384,7 @@ def final_test(args, net, criterion):
         val_loader = DataLoader(val_set,
                                 batch_size=4,
                                 num_workers=2, shuffle=False)
-    else:
+    elif 'cityscapes' in args.dataset:
         val_set = cityscapes.CityScapes('fine', 'val',
                                         data_path=args.data_path,
                                         joint_transform=None,
@@ -359,6 +393,17 @@ def final_test(args, net, criterion):
         val_loader = DataLoader(val_set,
                                 batch_size=args.val_batch_size,
                                 num_workers=2, shuffle=False)
+    else:
+        val_set = acdc.ACDC('fine', 'test' if test else 'val',
+                                data_path=args.data_path,
+                                code_path=args.code_path, 
+                                joint_transform=None,
+                                transform=input_transform,
+                                target_transform=target_transform)
+        val_loader = DataLoader(val_set,
+                                batch_size=4,
+                                num_workers=2, shuffle=False)
+
     print('Starting test...')
     vl_loss, val_acc, val_iu, iu_xclass = test(val_loader, net, criterion)
     ## Append info to logger

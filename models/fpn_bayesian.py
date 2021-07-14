@@ -243,7 +243,7 @@ class FPN_bayesian(nn.Module):
           (Variable) added feature map.
         '''
         _, _, H, W = y.size()
-        return F.upsample(x, size=(H, W), mode='bilinear', align_corners=True) + y
+        return F.interpolate(x, size=(H, W), mode='bilinear', align_corners=True) + y #@carina changed from .upsample to .interpolate
 
     def forward(self, x, bayesian=False, n_iter=1):
         # Bottom-up

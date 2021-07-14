@@ -20,8 +20,8 @@ from utils.replay_buffer import ReplayMemory
 import utils.parser as parser
 from utils.final_utils import train, validate, final_test
 
-#cudnn.benchmark = False
-#cudnn.deterministic = True
+cudnn.benchmark = False
+cudnn.deterministic = True
 
 
 def main(args):
@@ -106,17 +106,15 @@ def main(args):
     #####################################################################
     ####################### TRAIN ######################
     #####################################################################
-
     if args.train and args.al_algorithm == 'ralis':
         print('Starting training...')
 
         # Create schedulers
-        scheduler = ExponentialLR(optimizer, gamma=args.gamma)  #@carina TODO put scheduler after optimizer due to warning
+        scheduler = ExponentialLR(optimizer, gamma=args.gamma)
         schedulerP = None
         if args.al_algorithm == 'ralis':
             schedulerP = ExponentialLR(optimizerP, gamma=args.gamma_scheduler_dqn)
-        # train the segmentation network
-        print('Train the segmentation network...')
+
         net.train()
 
         list_existing_images = []
@@ -131,11 +129,9 @@ def main(args):
                                 ('state', 'state_subset', 'action', 'next_state', 'next_state_subset', 'reward'))
         memory = ReplayMemory(args.rl_buffer)
         TARGET_UPDATE = 5
-        target_net.load_state_dict(policy_net.state_dict()) #policy net gives regions
+        target_net.load_state_dict(policy_net.state_dict())
         target_net.eval()
-        #import ipdb
-        #ipdb.set_trace()
-        # Train the query network during several episodes with MDP transitions {(s_t, a_t, r_{t+1}, s_{t+1})} @carina
+
         for n_ep in range(num_episodes):
             ## [ --- Start of episode ---]  ##
             print('---------------Current episode: ' + str(n_ep) + '/' + str(num_episodes))
@@ -151,20 +147,18 @@ def main(args):
             # Initialize budget and counter to update target_network
             budget_reached = False
             counter_iter = 0
-
             # Get candidates
             num_regions = args.num_each_iter * args.rl_pool
             num_groups = args.num_each_iter
-            # Get candidates for state  (candidates = unlabeled set U_t?) @carina
-            candidates = train_set.get_candidates(num_regions_unlab=num_regions) #take all regions from image into account
+
+            candidates = train_set.get_candidates(num_regions_unlab=num_regions)
             candidate_set.reset()
-            candidate_set.add_index(list(candidates)) 
+            candidate_set.add_index(list(candidates))
 
             # Choose candidate pool, filtering out the images we already have
-            region_candidates = get_region_candidates(candidates, train_set, num_regions=num_regions) #region candidates = state_set D_s? @carina
+            region_candidates = get_region_candidates(candidates, train_set, num_regions=num_regions)
 
-            # 1. Compute state. Shape:[group_size, num regions, dim, w,h]
-            # state s_t is computed as a function of segmentation net and state set D_s @carina
+            # Compute state. Shape:[group_size, num regions, dim, w,h]
             current_state, region_candidates = compute_state(args, net, region_candidates, candidate_set, train_set,
                                                              num_groups=num_groups, reg_sz=args.region_size)
 
@@ -172,15 +166,15 @@ def main(args):
             args.patience = patience
             # Take images while the budget is not met
             while train_set.get_num_labeled_regions() < args.budget_labels and not budget_reached:
-                # 3. Choose actions. The actions are the regions to label at a given step
+                # Choose actions. The actions are the regions to label at a given step
                 action, steps_done, chosen_stats = select_action(args, policy_net, current_state,
                                                                  steps_done)
-                # 4. Add regions to labeled set @carina
+
                 list_existing_images = add_labeled_images(args, list_existing_images=list_existing_images,
                                                           region_candidates=region_candidates, train_set=train_set,
                                                           action_list=action, budget=args.budget_labels, n_ep=n_ep)
 
-                # Train segmentation network with selected regions (new sampled regions):
+                # Train segmentation network with selected regions:
                 print('Train network with selected images...')
                 tr_iu, vl_iu, vl_iu_xclass = train_classif(args, 0, train_loader, net,
                                                            criterion,
@@ -353,14 +347,11 @@ def main(args):
     ################################ TEST ########################
     #####################################################################
     if args.test:
-        #import ipdb
-        #ipdb.set_trace()
         print('Starting test...')
         scheduler = ExponentialLR(optimizer, gamma=args.gamma)
         schedulerP = None
 
         # We are TESTING the DQN, but we still train the segmentation network
-        print('Test the DQN, but still train the segmentation net...')
         net.train()
 
         # Load regions already labeled so far
@@ -455,7 +446,7 @@ def main(args):
         if budget_reached:
             if args.only_last_labeled:
                 train_set.end_al = True
-            print('Budget reached - Training with all regions.')
+            print('Training with all regions.')
             #@carina changed epoch from 1000 to 500
             args.epoch_num = 1000
 
@@ -479,20 +470,11 @@ def train_classif(args, curr_epoch, train_loader, net, criterion, optimizer, val
                   schedulerP, final_train=False):
     tr_iu = 0
     val_iu = 0
-    # original:
     #iu_xclass = [0.0] * 19 if 'cityscapes' in args.dataset else 11
-    # @carina:
-    #import ipdb 
-    #ipdb.set_trace()
-    if 'acdc' in args.dataset:
-        iu_xclass = [0.0] * 4
-    elif 'cityscapes' in args.dataset:
-        iu_xclass = [0.0] * 19
-    else: #camvid
-        iu_xclass = [0.0] * 11
-
+    # number of categories for acdc data: left and right ventricular cavities, myocardium
+    iu_xclass = [0.0] * 4 if 'acdc' in args.dataset else 19
     # Early stopping params initialization
-    es_val = best_record['mean_iu']
+    es_val = best_record['mean_iu']   #best record:{'epoch': 0, 'val_loss': 10000000000.0, 'acc': 0, 'mean_iu': 0}
     if get_training_stage(args) is not None:
         es_counter = int(get_training_stage(args).split('-')[1]) if 'final_train' in get_training_stage(args) else 0
     else:
@@ -500,9 +482,7 @@ def train_classif(args, curr_epoch, train_loader, net, criterion, optimizer, val
 
     for epoch in range(curr_epoch, args.epoch_num):
         print('Epoch %i /%i' % (epoch, args.epoch_num + 1))
-        #import ipdb
-        #ipdb.set_trace()
-        tr_loss, tr_loss_d, tr_acc, tr_iu = train(train_loader, net, criterion,
+        tr_loss, tr_loss_d, tr_acc, tr_iu = train(train_loader, net, criterion,  ### exception occurs in train()
                                                   optimizer)
         if final_train:
             vl_loss, val_acc, val_iu, iu_xclass, best_record = validate(val_loader, net, criterion,
