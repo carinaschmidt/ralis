@@ -18,7 +18,7 @@ Code (https://github.com/ArantxaCasanova/ralis) adapted to medical images (From 
 
 ### Run code on Tue ML Coud Slurm
 
-To run ralis training with 5 random seeds execute 
+To run ralis training execute 
 
 ````
 sbatch devel/ralis/scripts/slurm_train_ralis.sh
@@ -33,18 +33,19 @@ To run stuff depending on the pre-trained models, don't forget to download them 
 - Pytorch 0.4.0
 
 ## Scripts
-The folder 'scripts' contains the different bash scripts that could be used to train the same models used in the paper, for both Camvid and Cityscapes datasets. 
+The folder 'scripts' contains the different bash scripts that could be used to train the same models used in the paper from Casanova et al., for both Camvid and Cityscapes datasets. 
 - launch_supervised.sh: To train the pretrained segmentation models. 
 - launch_baseline.sh: To train the baselines 'random', 'entropy' and 'bald'.
 - launch_train_ralis.sh: To train the 'ralis' model.
 - launch_test_ralis.sh: To test the 'ralis' model. 
 
 ## Datasets
+Our investigated datasets:
 - ACDC: https://www.creatis.insa-lyon.fr/Challenge/acdc/index.html
 - BraTS18: https://www.med.upenn.edu/sbia/brats2018/data.html
 
 ## Trained models
-To download the trained RALIS models for ACDC and BraTS (as well as the pretrained segmentation model on GTA and D_T subsets): TODO
+To download the trained agent on ACDC and BraTS: TODO
 
 ## Citation
 If you use this code, please cite the original paper:
