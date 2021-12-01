@@ -5,22 +5,16 @@ from copy import deepcopy
 import numpy as np
 import torch
 from torch.utils import data
+import utils.parser as parser
 
 num_classes = 4
 ignore_label = 4
 path = 'acdc'
-palette = [128, 128, 128, 128, 0, 0, 192, 192, 128, 128, 64, 128, 0, 0, 192, 128, 128, 0, 192, 128, 128, 64, 64, 128,
-           64, 0, 128, 64, 64, 0, 0, 128, 192, 0, 0, 0]
-zero_pad = 256 * 3 - len(palette)
-for i in range(zero_pad):
-    palette.append(0)
-
-
-# def colorize_mask(mask):
-#     # mask: numpy array of the mask
-#     new_mask = Image.fromarray(mask.astype(np.uint8)).convert('P')
-#     new_mask.putpalette(palette)
-#     return new_mask
+# palette = [128, 128, 128, 128, 0, 0, 192, 192, 128, 128, 64, 128, 0, 0, 192, 128, 128, 0, 192, 128, 128, 64, 64, 128,
+#            64, 0, 128, 64, 64, 0, 0, 128, 192, 0, 0, 0]
+# zero_pad = 256 * 3 - len(palette)
+# for i in range(zero_pad):
+#     palette.append(0)
 
 
 def make_dataset(mode, root):
@@ -46,11 +40,12 @@ def make_dataset(mode, root):
         # 'pat_10_diag_2_frame_01_slice_0_size_(256, 256)_res_(256, 256).png')
         item = (im_p, os.path.join(mask_path, im_p.split('/')[-1]), im_p.split('/')[-1])
         items.append(item)
+    print("length of items: ", len(items))
     return items
 
 
 class ACDC_al(data.Dataset):
-    def __init__(self, quality, mode, data_path='', code_path='', joint_transform=None,
+    def __init__(self, quality, mode, data_path='', code_path='', joint_transform=None, joint_transform_region=None, joint_transform_acdc_al = None,
                  sliding_crop=None, transform=None, target_transform=None, candidates_option=False,
                  region_size=(80, 90),
                  num_each_iter=1, only_last_labeled=True, split='train'):
@@ -64,7 +59,10 @@ class ACDC_al(data.Dataset):
             raise RuntimeError('Found 0 images, please check the data set')
         self.quality = quality
         self.mode = mode
-        self.joint_transform = joint_transform
+        self.joint_transform = joint_transform #train transforms like for supervised
+        self.joint_transform_region = joint_transform_region #region crop
+        self.joint_transform_acdc_al = joint_transform_acdc_al  #train transforms - crop
+
         self.sliding_crop = sliding_crop
         self.transform = transform
         self.target_transform = target_transform
@@ -78,15 +76,35 @@ class ACDC_al(data.Dataset):
         self.state_subset = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_s'])]    
         self.state_subset_regions = {}
 
+        #print("d_t split: ", splits['d_t'])
         # len(splits['d_s']) is 36
         for i in range(len(splits['d_s'])):
             # region_size is here [80,90]
             x_r1 = np.arange(0, 256 - region_size[0] + 1, region_size[0]) #array([  0,  64, 128, 192]) 
             y_r1 = np.arange(0, 256 - region_size[1] + 1, region_size[1])
+            print("x_r1: ", x_r1)
+            print("y_r1: ", x_r1)
             self.state_subset_regions.update({i: np.array(np.meshgrid(x_r1, y_r1)).T.reshape(-1, 2)})
 
         if split == 'train':
             self.imgs = [img for i, img in enumerate(self.imgs) if (img[-1] in splits['d_t'])]
+            args = parser.get_arguments()
+            if "1patient" in args.exp_name:
+                print("1patient (pat 10 in D_T)")
+                self.imgs = [img for i, img in enumerate(self.imgs) if 'pat_10_diag_2' in img[0]]
+            elif "2patients" in args.exp_name:
+                self.imgs = [img for i, img in enumerate(self.imgs)  if ('pat_10_diag_2' in img[0] or 'pat_30_diag_3' in img[0]) ]
+                print("using 2 patients")
+            elif "3patients" in args.exp_name:
+                self.imgs = [img for i, img in enumerate(self.imgs) if ('pat_10_diag_2' in img[0] or 'pat_30_diag_3' in img[0] or 'pat_50_diag_1' in img[0])]
+                print("using 3 patients")
+            elif "4patients" in args.exp_name:
+                self.imgs = [img for i, img in enumerate(self.imgs) if ('pat_10_diag_2' in img[0] or 'pat_30_diag_3' in img[0] or 'pat_50_diag_1' in img[0] or 'pat_62_diag_0' in img[0])]
+                print("using 4 patients")
+            elif "5patients" in args.exp_name:
+                self.imgs = [img for i, img in enumerate(self.imgs) if ('pat_10_diag_2' in img[0] or 'pat_30_diag_3' in img[0] or 'pat_50_diag_1' in img[0] or 'pat_62_diag_0' in img[0] or 'pat_2_diag_2' in img[0])]
+                print("using 5 patients")
+            print("number of slices in train set: ", len(self.imgs))
             print("Using d_t")
         elif split == 'test':
             print("Using d_v")
@@ -102,6 +120,7 @@ class ACDC_al(data.Dataset):
         self.selected_regions = dict()
         self.list_regions = []
         self.num_imgs = len(self.imgs)
+        print("self.num_imgs: ", self.num_imgs)
         splitters_x = np.arange(0, 256 - region_size[0] + 1, region_size[0]) #array([  0,  64, 128, 192])
         splitters_y = np.arange(0, 256 - region_size[1] + 1, region_size[1]) ##array([  0,  64, 128, 192])
         splitters_mesh = np.array(np.meshgrid(splitters_y, splitters_x)).T.reshape(-1, 2) #array([[  0,   0],
@@ -115,40 +134,41 @@ class ACDC_al(data.Dataset):
         self.num_unlabeled_regions_total = (256 // region_size[1]) * (256 // region_size[0]) * self.num_imgs
         print('Number of unlabeled regions total: ', self.num_unlabeled_regions_total) #@carina
         self.region_size = region_size #[64,64]
+        print("region size: ", self.region_size)
 
     def get_subset_state(self, index):
         img_path, mask_path, im_name = self.state_subset[index]
-        # @carina added 
-        #import ipdb
-        #ipdb.set_trace()
-        #img, mask = np.stack((np_img,)*3, axis=-1), np.load(mask_path)
         img, mask = np.load(img_path), np.load(mask_path)
         img, mask = torch.from_numpy(img), torch.from_numpy(mask)
+        # img = torch.stack((img, img, img), dim=0)
+        # img_unsqueezed = img.unsqueeze(0).unsqueeze(3) #adds two additional dims (required from torch io) 
+        #mask = mask.unsqueeze(0)#.unsqueeze(3)
+        # subject = tio.Subject(
+        #     img=tio.ScalarImage(tensor=img_unsqueezed), 
+        #     mask=tio.LabelMap(tensor=mask_unsqueezed)
+        # )
 
         if self.joint_transform is not None:
-            #img =np_img #@carina to maybe avoid shape error
             img, mask = self.joint_transform(img, mask)
-        if self.transform is not None:
-            if type(img) != torch.Tensor:
-                img = self.transform(img) #self.transforms transforms ToTensor!! but ToTensor returns image (0-255)
-            #img = torch.from_numpy(img)           
-            #img.shape: torch.Size([3, 256, 256])
-            #norm_img = normalise_image(img)
-            #img = np.stack((norm_img,)*3, axis=-1)  #@carina added to meet correct shape 
-            #img = torch.from_numpy(img)
-            #img = img.permute((2, 0, 1)).contiguous() #torch.Size([256, 256, 3])
-            #print("type of img: ", type(img))
-        if self.target_transform is not None:
-            mask = self.target_transform(mask) #after transform: torch.Size([256, 256])
+            # transformed = self.joint_transform(subject)
+            # img_transf = transformed.img.data #.numpy()
+            # mask_transf = transformed.mask.data # .numpy()
+            # img = torch.squeeze(img_transf) #removes dimensions of size 1
+            # mask = torch.squeeze(mask_transf) 
+        
+        # if self.transform is not None:
+        #     if type(img) != torch.Tensor:
+        #         img = self.transform(img) #self.transforms transforms ToTensor!! but ToTensor returns image (0-255)
+        # if self.target_transform is not None:
+        #     mask = self.target_transform(mask) #after transform: torch.Size([256, 256])
         #img = np.stack((img,)*3, axis=-1) 
+        mask = torch.squeeze(mask) #removes dim 1 
         img = torch.stack((img, img, img), dim=0)
-        #import ipdb
-        #ipdb.set_trace()
-        return img, mask, None, (img_path, mask_path, im_name), self.state_subset_regions[index]
+        #print("img.shape in get subset state: ", img.shape)
+        #print("mask.shape in get subset state: ", mask.shape)
+        return img, mask.long(), None, (img_path, mask_path, im_name), self.state_subset_regions[index]
 
     def __getitem__(self, index):
-        #import ipdb
-        #ipdb.set_trace()
         # Train with all labeled images, selecting a random region per image, and doing the random crop around it
         if self.candidates or self.end_al:
             img_path, mask_path, im_name = self.imgs[self.selected_images[index]]
@@ -166,88 +186,73 @@ class ACDC_al(data.Dataset):
             img_path, mask_path, im_name = self.imgs[selected[0]]
             selected_region = selected[1]
 
-        #img, mask = Image.open(img_path).convert('RGB'), Image.open(mask_path)
-        #@carina
-        #np_img = np.load(img_path)
         img, mask = np.load(img_path), np.load(mask_path)
         img = torch.from_numpy(img)
-    
+        #img, mask = torch.from_numpy(img), torch.from_numpy(mask)
+        # img = torch.stack((img, img, img), dim=0)
+        # mask = mask.unsqueeze(0)
+        #print("tensor mask.max(): ", mask.max())
         if not self.candidates:
+            #print("maskout unselected regions: ")
             mask = self.maskout_unselected_regions(mask, selected[0], self.region_size)
-            
-        #@carina
-        #mask = Image.fromarray(mask.astype(np.uint8))
-        mask = torch.from_numpy(mask)
+        mask = torch.from_numpy(mask) #changed mask to tensor    
+
         if self.joint_transform is not None:
+            #print("selected region", selected_region)
             if not self.candidates:
-                #img, mask = torch.from_numpy(img), torch.from_numpy(mask)
                 img, mask = self.joint_transform(img, mask, selected_region)
             else:
-                #img, mask = torch.from_numpy(img), torch.from_numpy(mask)
                 img, mask = self.joint_transform(img, mask)
 
-        if self.transform is not None:
-            #img = np.stack((img,)*3, axis=-1) #@carina added to meet correct shape 
-            #img = self.transform(img)
-            #norm_img = normalise_image(img)
-            #img = np.stack((img,)*3, axis=-1)  #@carina added to meet correct shape 
-            if type(img) != torch.Tensor:
-                img = self.transform(img) #self.transforms transforms ToTensor!! 
-            #img = torch.from_numpy(img)
-            #img = img.permute((2, 0, 1)).contiguous() #torch.Size([256, 256, 3])
-        if self.target_transform is not None:
-            mask = self.target_transform(mask) #mask to tensor
-
+        # if self.transform is not None:
+        #     img = self.transform(img)
+        # if self.target_transform is not None:
+        #     mask = self.target_transform(mask)   
+        
+        mask = torch.squeeze(mask) #removes dim 1 
         img = torch.stack((img, img, img), dim=0)
-        #print("img shape ACDC_al getitem: ", img.shape)
-        #print("mask shape ACDC_al getitem: ", mask.shape)
-        #import ipdb
-        #ipdb.set_trace()
-        return img, mask, (img_path, mask_path, im_name), selected_region[0] if not self.candidates else \
+        # print("img.shape in get_item: ", img.shape)
+        # print("mask.shape in get_item: ", mask.shape)
+        #mask = torch.squeeze(mask)
+        return img, mask.long(), (img_path, mask_path, im_name), selected_region[0] if not self.candidates else \
             self.selected_images[index], 0
 
-    def maskout_unselected_regions(self, mask, image, region_size=(128, 120)):
-        masked = np.full(mask.shape, ignore_label)
+    def maskout_unselected_regions(self, mask, image, region_size=(128, 128)):
+        #masked = np.full(mask.shape, ignore_label)
+        masked = np.full(mask.shape, 0) #fill with 0 #@changed by carina 
         for region in self.selected_regions[image]:
             # Indexes reverted, because here width is the 2nd index.
             r_x = int(region[1])
             r_y = int(region[0])
             masked[r_x: r_x + region_size[1], r_y: r_y + region_size[0]] = mask[r_x: r_x + region_size[1],
                                                                            r_y: r_y + region_size[0]]
+        #print("masked after maskout: ", masked.min(), masked.max())
         return masked
 
     def get_specific_item(self, path):
         img_path, mask_path, im_name = self.imgs[path]
         cost_img = None
-        #@carina
-        #img, mask = Image.open(img_path).convert('RGB'), Image.open(mask_path)
-        #np_img = np.load(img_path)
         img, mask = np.load(img_path), np.load(mask_path)
-        img, mask = torch.from_numpy(img), torch.from_numpy(mask)
-
+        # print("img.shape: ", img.shape)
+        img, mask = torch.from_numpy(img), torch.from_numpy(mask) # .unsqueeze(0) # don't take channels into account
+        # img = torch.stack((img, img, img), dim=0)
+        #mask = mask.unsqueeze(0)
         if self.joint_transform is not None:
             img, mask = self.joint_transform(img, mask)
 
-        if self.transform is not None:  #self.transform calls torchvision transforms transforms.py
-            #import ipdb
-            #ipdb.set_trace()
-            #norm_img = normalise_image(img)
-            #img = np.stack((img,)*3, axis=-1)  #@carina added to meet correct shape 
-            if type(img) != torch.Tensor:
-                img = self.transform(img) #self.transforms transforms ToTensor!! 
-            #img = self.transform(img) #torch.Size([3, 256, 256])
-            #img = torch.from_numpy(img)  #torch.Size([256, 256, 3])
-            #img = img.permute((2, 0, 1)).contiguous() #torch.Size([256, 256, 3])
-        if self.target_transform is not None:
-            mask = self.target_transform(mask)
-        #img = np.stack((img,)*3, axis=-1)
+        # if self.transform is not None:
+        #     img = self.transform(img)
+        # if self.target_transform is not None:
+        #     mask = self.target_transform(mask)
+
+        mask = torch.squeeze(mask) #removes dim 1 
         img = torch.stack((img, img, img), dim=0)
-        # print("img shape ACDC_al getSpecitem: ", img.shape)
-        # print("mask shape ACDC_al getSpecitem: ", mask.shape)
-        return img, mask, cost_img, (img_path, mask_path, im_name)
+        # print("img.shape in get_specific item: ", img.shape)
+        # print("mask.shape in get_specific item: ", mask.shape)deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        return img, mask.long(), cost_img, (img_path, mask_path, im_name)
 
     def __len__(self):
-        if self.candidates and self.supervised:
+        if self.candidates: #and self.supervised:
             return len(self.imgs)
         elif self.candidates or self.end_al:
             return len(self.selected_images)
@@ -296,9 +301,12 @@ class ACDC_al(data.Dataset):
         """
         unlabeled_regions = 0
         candidates = []
+        print("Number of images in get_candidates: ", self.num_imgs) #@carina
         images_list = list(range(self.num_imgs))
         while unlabeled_regions <= num_regions_unlab:
             if len(images_list) == 0:
+                #import ipdb
+                #ipdb.set_trace()
                 raise ValueError('There is no more unlabeled regions to fullfill the amount we want!')
             index = np.random.choice(len(images_list))
             candidate = images_list.pop(index)

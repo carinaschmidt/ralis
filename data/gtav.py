@@ -46,7 +46,9 @@ def make_dataset(mode, root):
         raise ValueError('Split selected does not exist')
 
     # Indexes with mismatching sizes between image and mask
-    to_ignore = [15188, 17705] + [*range(20801, 20861)]
+    #to_ignore = [15188, 17705] + [*range(20801, 20861)]
+    #changed by @carina
+    to_ignore = [15188, 17705] + [*range(10001, 30861)] + [*range(0, 5001)]
 
     for it in splits:
         if it not in to_ignore:
@@ -59,7 +61,7 @@ def make_dataset(mode, root):
 
 class GTAV(data.Dataset):
     def __init__(self, quality, mode, data_path='', joint_transform=None,
-                 sliding_crop=None, transform=None, target_transform=None, camvid=False):
+                 sliding_crop=None, transform=None, target_transform=None, camvid=False, acdc=False):
 
         self.root = data_path + path
         self.imgs = make_dataset(mode, self.root)
@@ -86,20 +88,37 @@ class GTAV(data.Dataset):
                                   28: 8, 29: self.ignore_label, 30: self.ignore_label,
                                   31: self.ignore_label, 32: 8, 33: 10, 34: self.ignore_label}
         else:
-            self.num_classes = 19
-            self.ignore_label = 19
-            self.id_to_trainid = {0: self.ignore_label, 1: self.ignore_label,
+            if acdc:
+                self.num_classes = 4
+                self.ignore_label = 4
+                self.id_to_trainid = {0: self.ignore_label, 1: self.ignore_label,
                                   2: self.ignore_label,
                                   3: self.ignore_label, 4: self.ignore_label,
                                   5: self.ignore_label, 6: self.ignore_label,
-                                  7: 0, 8: 1, 9: self.ignore_label, 10: self.ignore_label,
-                                  11: 2, 12: 3, 13: 4,
+                                  7: 3, 8: self.ignore_label, 9: self.ignore_label, 10: self.ignore_label,
+                                  11: 1, 12: self.ignore_label, 13: self.ignore_label,
                                   14: self.ignore_label, 15: self.ignore_label,
-                                  16: self.ignore_label, 17: 5,
-                                  18: self.ignore_label, 19: 6, 20: 7, 21: 8, 22: 9,
-                                  23: 10, 24: 11, 25: 12, 26: 13, 27: 14,
-                                  28: 15, 29: self.ignore_label, 30: self.ignore_label,
-                                  31: 16, 32: 17, 33: 18, 34: self.ignore_label}
+                                  16: self.ignore_label, 17: 2,
+                                  18: self.ignore_label, 19: self.ignore_label, 20: self.ignore_label, 21: self.ignore_label, 22: self.ignore_label,
+                                  23: 0, 24: self.ignore_label, 25: self.ignore_label, 26: self.ignore_label, 27: self.ignore_label,
+                                  28: self.ignore_label, 29: self.ignore_label, 30: self.ignore_label,
+                                  31: self.ignore_label, 32: self.ignore_label, 33: self.ignore_label, 34: self.ignore_label}
+            #cityscapes
+            else:
+                self.num_classes = 19
+                self.ignore_label = 19
+                self.id_to_trainid = {0: self.ignore_label, 1: self.ignore_label,
+                                    2: self.ignore_label,
+                                    3: self.ignore_label, 4: self.ignore_label,
+                                    5: self.ignore_label, 6: self.ignore_label,
+                                    7: 0, 8: 1, 9: self.ignore_label, 10: self.ignore_label,
+                                    11: 2, 12: 3, 13: 4,
+                                    14: self.ignore_label, 15: self.ignore_label,
+                                    16: self.ignore_label, 17: 5,
+                                    18: self.ignore_label, 19: 6, 20: 7, 21: 8, 22: 9,
+                                    23: 10, 24: 11, 25: 12, 26: 13, 27: 14,
+                                    28: 15, 29: self.ignore_label, 30: self.ignore_label,
+                                    31: 16, 32: 17, 33: 18, 34: self.ignore_label}
 
     def __getitem__(self, index):
         img_path, mask_path, im_name = self.imgs[index]

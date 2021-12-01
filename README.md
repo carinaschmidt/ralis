@@ -1,6 +1,6 @@
 
-# Reinforced Active Learning for Image Segmentation (RALIS)
-Code for the paper [Reinforced Active Learning for Image Segmentation](https://arxiv.org/abs/2002.06583)
+# Reinforced Active Learning for Medical Image Segmentation (RALMIS)
+Code (https://github.com/ArantxaCasanova/ralis) adapted to medical images (From the following paper [Reinforced Active Learning for Image Segmentation](https://arxiv.org/abs/2002.06583))
 
 ## Additional Notes by C Baumgartner for use in Tue ML Cloud
 
@@ -24,10 +24,6 @@ To run ralis training with 5 random seeds execute
 sbatch devel/ralis/scripts/slurm_train_ralis.sh
 ````
 
-This works on my system. 
-
-Use the other `scripts/slurm_*` scripts to run other stuff. For some reason baselines didn't run on my system, without throwing an error. Jobs just got hung. Perhaps, not enough memory given in SBATCH settings?
-
 To run stuff depending on the pre-trained models, don't forget to download them from the Google Drive link below and copy into your checkpoints folder (e.g. `ckpt_seg`)
 
 ## Dependencies 
@@ -44,14 +40,14 @@ The folder 'scripts' contains the different bash scripts that could be used to t
 - launch_test_ralis.sh: To test the 'ralis' model. 
 
 ## Datasets
-Camvid: https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid
-
-Cityscapes: https://www.cityscapes-dataset.com/
+- ACDC: https://www.creatis.insa-lyon.fr/Challenge/acdc/index.html
+- BraTS18: https://www.med.upenn.edu/sbia/brats2018/data.html
 
 ## Trained models
-To download the trained RALIS models for Camvid and Cityscapes (as well as the pretrained segmentation model on GTA and D_T subsets): https://drive.google.com/file/d/13C4e0bWw6SEjTAD7JdAfLGVz7p7Veeb9/view?usp=sharing
+To download the trained RALIS models for ACDC and BraTS (as well as the pretrained segmentation model on GTA and D_T subsets): TODO
+
 ## Citation
-If you use this code, please cite:
+If you use this code, please cite the original paper:
 ```
 @inproceedings{
 Casanova2020Reinforced,

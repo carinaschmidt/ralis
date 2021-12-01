@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
+import utils.parser as parser
 
 
 class Bottleneck(nn.Module):
@@ -185,6 +186,14 @@ class FPN_bayesian(nn.Module):
             resnet.load_state_dict(state)
 
         self.conv1 = resnet.conv1
+
+        args = parser.get_arguments()
+        #for brats18 we have 4 instead of 3 input channels
+        if 'brats18' in args.dataset: 
+            new_weights = self.conv1.weight.repeat(1, 2, 1, 1)  # torch.Size([64, 6, 7, 7])
+            new_weights = new_weights[:, :4, :, :]
+            self.conv1_brats = nn.Conv2d(4, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+            self.conv1_brats.weight = nn.Parameter(new_weights)
         self.bn1 = resnet.bn1
         if freezed:
             for i in self.bn1.parameters():
@@ -247,7 +256,11 @@ class FPN_bayesian(nn.Module):
 
     def forward(self, x, bayesian=False, n_iter=1):
         # Bottom-up
-        c1 = self.conv1(x)
+        args = parser.get_arguments()
+        if 'brats18' in args.dataset: #use correct number of weights for 4 channels
+            c1 = self.conv1_brats(x)
+        else:        
+            c1 = self.conv1(x)
         c1 = self.bn1(c1)
         c1 = F.relu(c1)
         c1 = F.max_pool2d(c1, kernel_size=3, stride=2, padding=1)
@@ -295,6 +308,12 @@ class FPN_bayesian(nn.Module):
 
 def FPN50_bayesian(num_classes, pretrained=False,
                    freezed=False):
+    args = parser.get_arguments()
+    if "ImageNetBackbone" in args.exp_name:
+        pretrained = True
+    else:
+        pretrained = False
+    print("in FPN50_bayesian: pretrained = ", pretrained)
     model = FPN_bayesian(num_classes=num_classes,
                          pretrained=pretrained, freezed=freezed)
     return model

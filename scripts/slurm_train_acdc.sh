@@ -10,7 +10,7 @@
 #SBATCH -e logs/err_arr_%A_%a.err      # Standard error
 #SBATCH --mail-type=END,FAIL           # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=carina.schmidt@student.uni-tuebingen.de  # Email to which notifications will be sent
-#SBATCH --array=234   # array of cityscapes random seeds: 20 50 234 77 12
+#SBATCH --array=123   # array of cityscapes random seeds: 20 50 234 77 12
 scontrol show job $SLURM_JOB_ID 
 
 ckpt_path='/mnt/qb/baumgartner/cschmidt77_data/ckpt_seg_acdc/'
@@ -21,16 +21,16 @@ sif_path='/home/baumgartner/cschmidt77/ralis.sif'
 exec_command="singularity exec --nv --bind $data_path $sif_path"
 
 ### ACDC ###rl
-for lr in 0.05
+for lr in 0.001 0.05
     do
-    for lrdqn in 0.0001 0.001 0.01
+    for budget in 160 960 1440 2400 3040
         do
-        $exec_command python3 -u $code_path/run.py --exp-name "2021-07-09-train_ralis_acdc_DT_seed_234_budget_1920_lr_0.05_lrdqn_${lrdqn}" --full-res --region-size 64 64 \
-        --snapshot 'best_jaccard_val.pth' --al-algorithm 'ralis' \
+        $exec_command python3 -u $code_path/run.py --exp-name "2021-07-16-train_acdc_ImageNetBackbone_seed_123_lrdqn0.001_lr_${lr}_budget_${budget}" \
+        --seed ${SLURM_ARRAY_TASK_ID}  --checkpointer \
         --ckpt-path $ckpt_path --data-path $data_path \
-        --rl-episodes 100 --rl-buffer 600 --lr-dqn $lrdqn --epoch-num 9 \
-        --dataset 'acdc' --lr $lr --train-batch-size 32 --val-batch-size 4 --patience 20 \
-        --input-size 128 128 --only-last-labeled --budget-labels 480 --num-each-iter 16  --rl-pool 10 --seed ${SLURM_ARRAY_TASK_ID} \
-        --final-test
+        --input-size 128 128 --only-last-labeled --dataset 'acdc' --lr $lr --train-batch-size 32 --val-batch-size 8 \
+        --patience 100 --region-size 64 64 --epoch-num 49 \
+        --rl-episodes 100 --rl-buffer 600 --lr-dqn 0.001 --dqn-epochs 9 \
+        --budget-labels $budget --num-each-iter 16 --al-algorithm 'ralis' --rl-pool 50 
         done
     done

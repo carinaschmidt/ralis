@@ -46,7 +46,7 @@ class FlipChannels(object):
 
 
 class MaskToTensorOneHot(object):
-    def __init__(self, num_classes=19):
+    def __init__(self, num_classes=4):
         self.num_classes=num_classes
     def __call__(self, img):
         return torch.from_numpy( np.eye(self.num_classes+1)[np.array(img, dtype=np.int32)]).long().transpose(0,2)

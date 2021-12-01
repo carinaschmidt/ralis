@@ -15,7 +15,6 @@ except:
     logging.warning('Could not import opencv. Augmentation functions will be unavailable.')
 else:
     def rotate_image(img, angle, interp=cv2.INTER_LINEAR):
-
         rows, cols = img.shape[:2]
         rotation_matrix = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
         return cv2.warpAffine(img, rotation_matrix, (cols, rows), flags=interp)

@@ -1,11 +1,12 @@
 import argparse
 import os
 
-ckpt_path = '/home/baumgartner/cschmidt77/ckpt_seg'
-data_path = '/mnt/qb/baumgartner/cschmidt77_data'
-code_path = '/home/baumgartner/cschmidt77/devel/ralis'
+ckpt_path='/mnt/qb/baumgartner/cschmidt77_data/ckpt_seg_acdc/'
+data_path='/mnt/qb/baumgartner/cschmidt77_data/'
+#code_path='/home/baumgartner/cschmidt77/devel/ralis'
 #run locally
-#code_path = '/home/carina/baumgartner/cschmidt77/devel/ralis'
+code_path= '/home/carina/ralis'
+#code_path = '/home/baumgartner/cschmidt77/devel/ralis'
 
 
 def get_arguments():
@@ -53,6 +54,10 @@ def get_arguments():
                              " If 0, images are not scaled. If a scale is "
                              "introduced, this will be the size of the width"
                              " of the image.")
+    parser.add_argument("--scaling", action='store_true',
+                    help="Scale factor to resize training images."
+                            " If false images are not scaled. If a scale is "
+                            "introduced, they will be randomly scaled by a factor between 0.9 and 1.1")
     parser.add_argument("--momentum", type=float, default=0.95,
                         help="Learning rate momentum.")
     parser.add_argument("--patience", type=int, default=60,
@@ -72,7 +77,7 @@ def get_arguments():
                         help="Load optimizer weights from another file.")
 
     parser.add_argument("--optimizer", type=str, default='SGD',
-                        choices=['SGD', 'Adam', 'RMSprop'])
+                        choices=['SGD', 'Adam', 'RMSprop', 'AdamW'])
 
     parser.add_argument("--train", action='store_false',
                         help="Train the model.")
@@ -90,7 +95,7 @@ def get_arguments():
                         help=" Which metric to choose samples for active learning.")
     parser.add_argument("--dataset", type=str, default='cityscapes',
                         choices=['camvid', 'camvid_subset', 'cityscapes', 'cityscapes_subset',
-                                 'cs_upper_bound', 'gta', 'gta_for_camvid', 'acdc_unnormalised', 'acdc'])
+                                 'cs_upper_bound', 'gta', 'gta_for_camvid', 'gta_for_acdc', 'acdc', 'camvid_for_acdc', 'msdHeart', 'brats18'])
 
     parser.add_argument("--budget-labels", type=int, default=100)
     parser.add_argument("--num-each-iter", type=int, default=1)  ## Number of regions to label every AL epoch
@@ -112,6 +117,12 @@ def get_arguments():
 
     parser.add_argument("--full-res", action='store_true',
                         help="Full resolution images")
+    
+    parser.add_argument("--modality", default='2D',
+                            choices=['2D', '3D'])
+    
+    parser.add_argument("--newAugmentations", action='store_true',
+                        help="Uses GI/GD transforms")
 
     return parser.parse_args()
 

@@ -1,6 +1,7 @@
 # Modified from (C) Wei YANG 2017
 from __future__ import absolute_import
 import numpy as np
+import utils.parser as parser
 
 __all__ = ['Logger', 'LoggerMonitor', 'savefig']
 
@@ -8,34 +9,96 @@ class Logger(object):
     '''Save training process to log file with simple plot function.'''
 
     def __init__(self, fpath, title=None, resume=False):
-        self.file = None
-        self.resume = resume
-        self.title = '' if title == None else title
-        if fpath is not None:
-            if resume:
-                self.file = open(fpath, 'r')
-                name = self.file.readline()
-                self.names = name.rstrip().split('\t')
-                self.numbers = {}
-                for _, name in enumerate(self.names):
-                    self.numbers[name] = []
+        args = parser.get_arguments()
+        if args.modality == '2D':
+            if 'brats18' or 'acdc' in args.dataset:
+                self.file = None
+                self.resume = resume
+                self.title = '' if title == None else title
+                if fpath is not None:
+                    if resume:
+                        self.file = open(fpath, 'r')
+                        name = self.file.readline()
+                        self.names = name.rstrip().split('\t')
+                        self.numbers = {}
+                        for _, name in enumerate(self.names):
+                            self.numbers[name] = []
 
-                for numbers in self.file:
-                    numbers = numbers.rstrip().split('\t')
-                    for i in range(0, len(numbers)):
-                        self.numbers[self.names[i]].append(numbers[i])
-                if self.numbers['Valid mean iu']:
-                    self.resume_epoch=np.argmax(self.numbers['Valid mean iu'])
-                    self.resume_jacc=max(self.numbers['Valid mean iu'])
-                    self.last_epoch = int(float(self.numbers['Epoch'][-1]))
-                else:
-                    self.last_epoch = 0
-                    self.resume_jacc = 0
-                    self.resume_epoch = 0
-                self.file.close()
-                self.file = open(fpath, 'a')
+                        for numbers in self.file:
+                            numbers = numbers.rstrip().split('\t')
+                            for i in range(0, len(numbers)):
+                                self.numbers[self.names[i]].append(numbers[i])
+                        if self.numbers['Valid mean dice']:
+                            self.resume_epoch=np.argmax(self.numbers['Valid mean dice'])
+                            self.resume_jacc=max(self.numbers['Valid mean dice'])
+                            self.last_epoch = int(float(self.numbers['Epoch'][-1]))
+                        else:
+                            self.last_epoch = 0
+                            self.resume_jacc = 0
+                            self.resume_epoch = 0
+                        self.file.close()
+                        self.file = open(fpath, 'a')
+                    else:
+                        self.file = open(fpath, 'a')
             else:
-                self.file = open(fpath, 'a')
+                self.file = None
+                self.resume = resume
+                self.title = '' if title == None else title
+                if fpath is not None:
+                    if resume:
+                        self.file = open(fpath, 'r')
+                        name = self.file.readline()
+                        self.names = name.rstrip().split('\t')
+                        self.numbers = {}
+                        for _, name in enumerate(self.names):
+                            self.numbers[name] = []
+
+                        for numbers in self.file:
+                            numbers = numbers.rstrip().split('\t')
+                            for i in range(0, len(numbers)):
+                                self.numbers[self.names[i]].append(numbers[i])
+                        if self.numbers['Valid mean iu']:
+                            self.resume_epoch=np.argmax(self.numbers['Valid mean iu'])
+                            self.resume_jacc=max(self.numbers['Valid mean iu'])
+                            self.last_epoch = int(float(self.numbers['Epoch'][-1]))
+                        else:
+                            self.last_epoch = 0
+                            self.resume_jacc = 0
+                            self.resume_epoch = 0
+                        self.file.close()
+                        self.file = open(fpath, 'a')
+                    else:
+                        self.file = open(fpath, 'a')
+        else: #3D modality
+            self.file = None
+            self.resume = resume
+            self.title = '' if title == None else title
+            if fpath is not None:
+                if resume:
+                    self.file = open(fpath, 'r')
+                    name = self.file.readline()
+                    self.names = name.rstrip().split('\t')
+                    self.numbers = {}
+                    for _, name in enumerate(self.names):
+                        self.numbers[name] = []
+
+                    for numbers in self.file:
+                        numbers = numbers.rstrip().split('\t')
+                        for i in range(0, len(numbers)):
+                            self.numbers[self.names[i]].append(numbers[i])
+                    if self.numbers['Valid mean dice']:
+                        self.resume_epoch=np.argmax(self.numbers['Valid mean dice'])
+                        self.resume_jacc=max(self.numbers['Valid mean dice'])
+                        self.last_epoch = int(float(self.numbers['Epoch'][-1]))
+                    else:
+                        self.last_epoch = 0
+                        self.resume_jacc = 0
+                        self.resume_epoch = 0
+                    self.file.close()
+                    self.file = open(fpath, 'a')
+                else:
+                    self.file = open(fpath, 'a')
+
 
     def set_names(self, names):
         if self.resume:
@@ -51,6 +114,8 @@ class Logger(object):
         self.file.flush()
 
     def append(self, numbers):
+        # print("self.names: ", self.names)
+        # print("len(numbers): ", len(numbers))
         assert len(self.names) == len(numbers), 'Numbers do not match names'
         for index, num in enumerate(numbers):
             self.file.write("{0:.16f}".format(num))

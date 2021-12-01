@@ -12,7 +12,7 @@ from torch.backends import cudnn
 from torch.optim.lr_scheduler import ExponentialLR
 
 from models.model_utils import create_models, load_models, get_region_candidates, compute_state, select_action, \
-    add_labeled_images, optimize_model_conv
+    add_labeled_images, optimize_model_conv, compute_state_dataset_agnostic, select_action_dataset_agnostic
 from data.data_utils import get_data
 from utils.final_utils import check_mkdir, create_and_load_optimizers, get_logfile, get_training_stage, \
     set_training_stage
@@ -20,8 +20,8 @@ from utils.replay_buffer import ReplayMemory
 import utils.parser as parser
 from utils.final_utils import train, validate, final_test
 
-#cudnn.benchmark = False
-#cudnn.deterministic = True
+cudnn.benchmark = False
+cudnn.deterministic = True
 
 
 def main(args):
@@ -117,6 +117,8 @@ def main(args):
             schedulerP = ExponentialLR(optimizerP, gamma=args.gamma_scheduler_dqn)
         # train the segmentation network
         print('Train the segmentation network...')
+        print('net to train is of type: ', type(net))
+        #print('net to train is: ', net)
         net.train()
 
         list_existing_images = []
@@ -156,25 +158,39 @@ def main(args):
             num_regions = args.num_each_iter * args.rl_pool
             num_groups = args.num_each_iter
             # Get candidates for state  (candidates = unlabeled set U_t?) @carina
+            # get images to choose regions from
             candidates = train_set.get_candidates(num_regions_unlab=num_regions) #take all regions from image into account
+            # candidates_tuple_list = train_set.get_volume_candidates(num_regions_unlab=num_regions) #
             candidate_set.reset()
-            candidate_set.add_index(list(candidates)) 
+            candidate_set.add_index(list(candidates)) #real images/volumes
 
             # Choose candidate pool, filtering out the images we already have
             region_candidates = get_region_candidates(candidates, train_set, num_regions=num_regions) #region candidates = state_set D_s? @carina
 
-            # 1. Compute state. Shape:[group_size, num regions, dim, w,h]
-            # state s_t is computed as a function of segmentation net and state set D_s @carina
-            current_state, region_candidates = compute_state(args, net, region_candidates, candidate_set, train_set,
+            #@carina compute state dataset agnostic
+            if "agnostic" in args.exp_name:
+                print("---Compute state dataset agnostic---")
+                current_state, region_candidates = compute_state_dataset_agnostic(args, net, region_candidates, candidate_set, train_set,
                                                              num_groups=num_groups, reg_sz=args.region_size)
-
+            else:
+                # state s_t is computed as a function of segmentation net and state set D_s @carina
+                # 1. Compute state. Shape:[group_size, num regions, dim, w,h]
+                current_state, region_candidates = compute_state(args, net, region_candidates, candidate_set, train_set,
+                                                                num_groups=num_groups, reg_sz=args.region_size)
+            
             args.epoch_num = epoch_num
             args.patience = patience
             # Take images while the budget is not met
             while train_set.get_num_labeled_regions() < args.budget_labels and not budget_reached:
-                # 3. Choose actions. The actions are the regions to label at a given step
-                action, steps_done, chosen_stats = select_action(args, policy_net, current_state,
-                                                                 steps_done)
+                
+                 #@carina compute state dataset agnostic
+                if "agnostic" in args.exp_name:
+                    action, steps_done, chosen_stats = select_action_dataset_agnostic(args, policy_net, current_state,
+                                                                    steps_done)
+                else:
+                    # 3. Choose actions. The actions are the regions to label at a given step @Carina
+                    action, steps_done, chosen_stats = select_action(args, policy_net, current_state,
+                                                                    steps_done)
                 # 4. Add regions to labeled set @carina
                 list_existing_images = add_labeled_images(args, list_existing_images=list_existing_images,
                                                           region_candidates=region_candidates, train_set=train_set,
@@ -206,9 +222,19 @@ def main(args):
 
                 # Compute next state
                 if not train_set.get_num_labeled_regions() >= args.budget_labels and not budget_reached:
-                    next_state, region_candidates = compute_state(args, net, region_candidates, candidate_set,
-                                                                  train_set, num_groups=num_groups,
-                                                                  reg_sz=args.region_size)
+                    # next_state, region_candidates = compute_state(args, net, region_candidates, candidate_set,
+                    #                                               train_set, num_groups=num_groups,
+                    #                                               reg_sz=args.region_size)
+                    if "agnostic" in args.exp_name:
+                        print("---Compute state dataset agnostic---")
+                        next_state, region_candidates = compute_state_dataset_agnostic(args, net, region_candidates, candidate_set, train_set,
+                                                             num_groups=num_groups, reg_sz=args.region_size)
+                    else:
+                        # state s_t is computed as a function of segmentation net and state set D_s @carina
+                        # 1. Compute state. Shape:[group_size, num regions, dim, w,h]
+                        next_state, region_candidates = compute_state(args, net, region_candidates, candidate_set, train_set,
+                                                                num_groups=num_groups, reg_sz=args.region_size)
+
                 else:
                     next_state = None
 
@@ -262,6 +288,7 @@ def main(args):
                                                   scheduler, schedulerP, final_train=True)
 
             # End of budget
+            #resetting network for next episode
             logger.close()
             train_set.reset()
             list_existing_images = []
@@ -272,7 +299,7 @@ def main(args):
             del (train_set)
             del (candidate_set)
 
-            print ('Resetting the networks, optimizers and data!')
+            print ('Resetting the networks, optimizers and data!')  
             # Create the networks from scratch, except the policy and target networks.
             ####------ Create segmentation, query and target network ------####
             kwargs_models = {"dataset": args.dataset,
@@ -338,7 +365,7 @@ def main(args):
             optimizer, _ = create_and_load_optimizers(**kwargs_load_opt)
             scheduler = ExponentialLR(optimizer, gamma=args.gamma)
 
-            net.train()
+            net.train() #batch norm in train mode
 
             # Save final policy network with the best accuracy on the validation set
             if (val_acc_episode > best_val_episode):
@@ -347,6 +374,8 @@ def main(args):
                            os.path.join(args.ckpt_path, args.exp_name,
                                         'policy_best_jaccard_val.pth'))
                 policy_net.cuda()
+
+            #torch.cuda.empty_cache() #@carina
         ## [ --- End of episode iteration --- ] ##
 
     #####################################################################
@@ -399,8 +428,17 @@ def main(args):
             # Choose candidate pool
             region_candidates = get_region_candidates(candidates, train_set, num_regions=num_regions)
             # Compute state. Shape: [num_regions, dimensions state, w, h] Wanted: [group_size, num regions, dim, w,h]
-            current_state, region_candidates = compute_state(args, net, region_candidates, candidate_set, train_set,
-                                                             num_groups=num_groups, reg_sz=args.region_size)
+            #current_state, region_candidates = compute_state(args, net, region_candidates, candidate_set, train_set,
+            #                                                 num_groups=num_groups, reg_sz=args.region_size)
+            if "agnostic" in args.exp_name:
+                print("---Compute state dataset agnostic---")
+                current_state, region_candidates = compute_state_dataset_agnostic(args, net, region_candidates, candidate_set, train_set,
+                                                            num_groups=num_groups, reg_sz=args.region_size)
+            else:
+                # state s_t is computed as a function of segmentation net and state set D_s @carina
+                # 1. Compute state. Shape:[group_size, num regions, dim, w,h]
+                current_state, region_candidates = compute_state(args, net, region_candidates, candidate_set, train_set,
+                                                            num_groups=num_groups, reg_sz=args.region_size)
 
         sel_act = False
 
@@ -441,9 +479,19 @@ def main(args):
                     region_candidates = get_region_candidates(candidates, train_set, num_regions=num_regions)
                     # Compute state. Shape: [num_regions, dimensions state, w, h] Wanted: [group_size, num regions,
                     # dim, w,h]
-                    next_state, region_candidates = compute_state(args, net, region_candidates, candidate_set,
-                                                                  train_set, num_groups=num_groups,
-                                                                  reg_sz=args.region_size)
+                    #next_state, region_candidates = compute_state(args, net, region_candidates, candidate_set,
+                    #                                              train_set, num_groups=num_groups,
+                    #                                             reg_sz=args.region_size)
+                    if "agnostic" in args.exp_name:
+                        print("---Compute state dataset agnostic---")
+                        next_state, region_candidates = compute_state_dataset_agnostic(args, net, region_candidates, candidate_set, train_set,
+                                                            num_groups=num_groups, reg_sz=args.region_size)
+                    else:
+                        # state s_t is computed as a function of segmentation net and state set D_s @carina
+                        # 1. Compute state. Shape:[group_size, num regions, dim, w,h]
+                        next_state, region_candidates = compute_state(args, net, region_candidates, candidate_set, train_set,
+                                                            num_groups=num_groups, reg_sz=args.region_size)
+
                     # Move to the next state
                     current_state = next_state
                     del (next_state)
@@ -477,28 +525,32 @@ def main(args):
 
 def train_classif(args, curr_epoch, train_loader, net, criterion, optimizer, val_loader, best_record, logger, scheduler,
                   schedulerP, final_train=False):
+    #torch.cuda.empty_cache() #@carina added 
     tr_iu = 0
     val_iu = 0
-    # original:
-    #iu_xclass = [0.0] * 19 if 'cityscapes' in args.dataset else 11
-    # @carina:
-    #import ipdb 
-    #ipdb.set_trace()
     if 'acdc' in args.dataset:
         iu_xclass = [0.0] * 4
+    elif 'msdHeart' in args.dataset:
+        iu_xclass = [0.0] * 2
     elif 'cityscapes' in args.dataset:
         iu_xclass = [0.0] * 19
+    elif 'brats18' in args.dataset:
+        if args.modality == '2D':
+             iu_xclass = [0.0] * 4
+        else: # modality == '3D'
+            iu_xclass = [0.0] * 3
     else: #camvid
         iu_xclass = [0.0] * 11
 
     # Early stopping params initialization
-    es_val = best_record['mean_iu']
+    es_val = best_record['mean_dice']
     if get_training_stage(args) is not None:
         es_counter = int(get_training_stage(args).split('-')[1]) if 'final_train' in get_training_stage(args) else 0
     else:
         es_counter = 0
 
     for epoch in range(curr_epoch, args.epoch_num):
+        #torch.cuda.empty_cache() 
         print('Epoch %i /%i' % (epoch, args.epoch_num + 1))
         #import ipdb
         #ipdb.set_trace()
@@ -514,7 +566,7 @@ def train_classif(args, curr_epoch, train_loader, net, criterion, optimizer, val
                                                                             args)
         if final_train or (not final_train and epoch == args.epoch_num - 1):
             scheduler.step()
-            scheduler.step()
+            scheduler.step() #@carina remove second scheduler.step?
             if args.al_algorithm == 'ralis' and schedulerP is not None:
                 schedulerP.step()
             # Early stopping with val jaccard
@@ -541,5 +593,32 @@ def train_classif(args, curr_epoch, train_loader, net, criterion, optimizer, val
 
 if __name__ == '__main__':
     ####------ Parse arguments from console  ------####
+    #os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+    print("torch.cuda.is_available()", torch.cuda.is_available())
+    #gpu=1
+    #device = torch.device(f"cuda:{gpu}" if torch.cuda.is_available() else "cpu")
+    #if torch.cuda.is_available():
+    #    torch.cuda.set_device(device)
+    #torch.cuda.set_device(1)
+    torch.cuda.empty_cache() 
+    import sys
+    print('__Python VERSION:', sys.version)
+    print('__pyTorch VERSION:', torch.__version__)
+    print('__CUDA VERSION') # 1.9.0+cu102
+    from subprocess import call
+    #torch.cuda.set_device(0)
+    # call(["nvcc", "--version"]) does not work
+    print('__CUDNN VERSION:', torch.backends.cudnn.version()) #7605
+    print('__Number CUDA Devices:', torch.cuda.device_count())
+    print('__Devices')
+    call(["nvidia-smi", "--format=csv", "--query-gpu=index,name,driver_version,memory.total,memory.used,memory.free"])
+    print('Active CUDA Device: GPU', torch.cuda.current_device())
+
+    print ('Available devices ', torch.cuda.device_count())
+    print ('Current cuda device ', torch.cuda.current_device())
+
+    print("torch.cuda.is_available()", torch.cuda.is_available())
+    print("torch.version.cuda", torch.version.cuda)
     args = parser.get_arguments()
     main(args)
+    torch.cuda.empty_cache() 

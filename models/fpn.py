@@ -1,11 +1,14 @@
 # Adapted from https://github.com/kuangliu/pytorch-fpn/blob/master/fpn.py
 
 import math
+from os import name
+from PIL.Image import new
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.modules.conv import Conv2d
 import torch.utils.model_zoo as model_zoo
-
+import utils.parser as parser
 
 class Bottleneck(nn.Module):
     expansion = 4
@@ -170,6 +173,7 @@ class FPN(nn.Module):
                  freezed: (bool) If True, batch norm is freezed.
                  which_resnet: (str) Indicates if we use ResNet50 or ResNet101.
         '''
+        print("in FPN")
         self.in_planes = 64
         if which_resnet == 'resnet50':
             string_load = 'https://download.pytorch.org/models/resnet50-19c8e357.pth'
@@ -186,6 +190,18 @@ class FPN(nn.Module):
             resnet.load_state_dict(state)
 
         self.conv1 = resnet.conv1
+        #print("self.conv1: ", self.conv1) # Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        args = parser.get_arguments()
+        #for brats18 we have 4 instead of 3 input channels
+        if 'brats18' in args.dataset: 
+            new_weights = self.conv1.weight.repeat(1, 2, 1, 1)  # torch.Size([64, 6, 7, 7])
+            new_weights = new_weights[:, :4, :, :]
+            #print("new_weights.shape: ", new_weights.shape) # torch.Size([64, 4, 7, 7])
+            self.conv1_brats = Conv2d(4, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+            #print("self.conv1_brats: ", self.conv1_brats)
+            self.conv1_brats.weight = nn.Parameter(new_weights)
+           
+
         self.bn1 = resnet.bn1
         if freezed:
             for i in self.bn1.parameters():
@@ -219,9 +235,9 @@ class FPN(nn.Module):
         self.latup1 = Upsample(scale_factor=4)
         self.latup2 = Upsample(scale_factor=2)
 
-        # Linear classifier
         self.classifier = nn.Conv2d(128 * 4, num_classes, kernel_size=3,
-                                    stride=1, padding=1)
+                                  stride=1, padding=1)
+
         self.final_up = nn.Upsample(scale_factor=4, mode='bilinear', align_corners=True)
 
         self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
@@ -246,7 +262,12 @@ class FPN(nn.Module):
 
     def forward(self, x):
         # Bottom-up
-        c1 = self.conv1(x)
+        #torch.backends.cudnn.enabled = False
+        args = parser.get_arguments()
+        if 'brats18' in args.dataset: #use correct number of weights for 4 channels
+            c1 = self.conv1_brats(x)
+        else:        
+            c1 = self.conv1(x)
         c1 = self.bn1(c1)
         c1 = F.relu(c1)
         c1 = F.max_pool2d(c1, kernel_size=3, stride=2, padding=1)
@@ -284,15 +305,21 @@ class FPN(nn.Module):
 
         return out, c5
 
-
+# @carina changed preTrained to True to use ImageNet
 def FPN50(num_classes, pretrained=False,
           freezed=False):
+    args = parser.get_arguments()
+    if "ImageNetBackbone" in args.exp_name:
+        pretrained = True
+    else:
+        pretrained = False
+    print("in FPN50: pretrained = ", pretrained)
     model = FPN(num_classes=num_classes,
                 pretrained=pretrained, freezed=freezed)
     return model
 
 
-def FPN101(num_classes, pretrained=True,
+def FPN101(num_classes, pretrained=False,
            freezed=False):
     model = FPN(num_classes=num_classes,
                 pretrained=pretrained, freezed=freezed,

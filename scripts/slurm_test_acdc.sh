@@ -23,20 +23,18 @@ sif_path='/home/baumgartner/cschmidt77/ralis.sif'
 exec_command="singularity exec --nv --bind $data_path $sif_path"
 
 ### ACDC ###
-for lr in 0.05
+for lr in 0.001 0.05
     do
     for budget in 160 960 1440 2400 4800 11900 
         do
-        $exec_command python3 -u $code_path/run.py --exp-name "2021-07-09-eval_ralis_acdc_pretrainedSegDT_seed234_lr_0.05_lrdqn0.01_budget"$budget \
-        --al-algorithm "ralis" --checkpointer --region-size 64 64 \
-        --load-weights --exp-name-toload "2021-07-08-acdc_pretrained_Dt_lr0.05_inputsize_128128" \
+        $exec_command python3 -u $code_path/run.py --exp-name "2021-07-17-test_acdc_ImageNetBackbone_seed_123_lrdqn0.001_lr_${lr}_budget_${budget}" \
+        --seed ${SLURM_ARRAY_TASK_ID}  --checkpointer \
+        --load-weights --exp-name-toload "2021-07-16-train_acdc_ImageNetBackbone_seed_123_lrdqn0.001_lr_${lr}_budget_${budget}" \
         --ckpt-path $ckpt_path --data-path $data_path \
-        --dataset "acdc" --lr 0.05 --train-batch-size 32 --val-batch-size 8 --patience 100 \
-        --epoch-num 10 \
-        --snapshot "best_jaccard_val.pth" \
-        --dqn-epochs 10 --lr-dqn 0.01 \
-        --exp-name-toload-rl "2021-07-09-train_ralis_acdc_DT_seed_234_budget_1920_lr_0.05_lrdqn_0.0001" \
-        --input-size 128 128 --only-last-labeled --budget-labels $budget --num-each-iter 16  --rl-pool 10 --seed 234 \
-        --train --test --final-test 
+        --input-size 128 128 --only-last-labeled --dataset 'acdc' --lr $lr --train-batch-size 32 --val-batch-size 8 \
+        --patience 100 --region-size 64 64 --epoch-num 49 \
+        --rl-episodes 100 --rl-buffer 600 --lr-dqn 0.001 --dqn-epochs 9 --exp-name-toload-rl "2021-07-16-train_acdc_ImageNetBackbone_seed_123_lrdqn0.001_lr_${lr}_budget_${budget}" \
+        --budget-labels $budget --num-each-iter 16 --al-algorithm 'ralis' --rl-pool 50 \
+        --train --test --final-test
         done
     done

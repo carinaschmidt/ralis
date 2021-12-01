@@ -46,7 +46,7 @@ def make_dataset(mode, root):
 
 class Camvid(data.Dataset):
     def __init__(self, quality, mode, data_path='', code_path='', joint_transform=None,
-                 sliding_crop=None, transform=None, target_transform=None, subset=False):
+                 sliding_crop=None, transform=None, target_transform=None, subset=False, acdc=False):
         self.num_classes = num_classes
         self.ignore_label = ignore_label
         self.root = data_path + path
@@ -59,6 +59,15 @@ class Camvid(data.Dataset):
         self.sliding_crop = sliding_crop
         self.transform = transform
         self.target_transform = target_transform
+
+        if acdc:
+            self.num_classes = 4
+            self.ignore_label = 4
+            self.id_to_trainid = {0: self.ignore_label, 1: 0,
+                                  2: self.ignore_label,
+                                  3: 1, 4: self.ignore_label,
+                                  5: self.ignore_label, 6: 2,
+                                  7: 3, 8: self.ignore_label, 9: self.ignore_label, 10: self.ignore_label}
 
         d_t = np.load(
             os.path.join(code_path, 'data/camvid_al_splits.npy'), 
