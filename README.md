@@ -1,6 +1,6 @@
 
 # Reinforced Active Learning for Medical Image Segmentation (RALMIS)
-Code (https://github.com/ArantxaCasanova/ralis) adapted to medical images (From the following paper [Reinforced Active Learning for Image Segmentation](https://arxiv.org/abs/2002.06583))
+Code (https://github.com/ArantxaCasanova/ralis) adapted to 3D medical images (From the following paper [Reinforced Active Learning for Image Segmentation](https://arxiv.org/abs/2002.06583))
 
 ## Additional Notes by C Baumgartner for use in Tue ML Cloud
 
