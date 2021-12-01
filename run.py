@@ -111,7 +111,7 @@ def main(args):
         print('Starting training...')
 
         # Create schedulers
-        scheduler = ExponentialLR(optimizer, gamma=args.gamma)  #@carina TODO put scheduler after optimizer due to warning
+        scheduler = ExponentialLR(optimizer, gamma=args.gamma)
         schedulerP = None
         if args.al_algorithm == 'ralis':
             schedulerP = ExponentialLR(optimizerP, gamma=args.gamma_scheduler_dqn)

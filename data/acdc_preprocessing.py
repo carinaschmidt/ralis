@@ -57,8 +57,7 @@ def load_patient_frames(input_folder, pat_train_test_val, size, target_resolutio
         folder_path = os.path.join(input_folder, folder)
 
         if os.path.isdir(folder_path):
-            # TODO splitting patients into train, test, val (regarding diseases)
-
+            # splitting patients into train, test, val (regarding diseases)
             infos = {}
             for line in open(os.path.join(folder_path, 'Info.cfg')):
                 label, value = line.split(':')

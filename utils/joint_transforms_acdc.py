@@ -70,7 +70,7 @@ class ComposeRegion(object):
 class RandomCrop(object):
     def __init__(self, size, padding=0):
         if isinstance(size, numbers.Number):
-            self.size = (int(size), int(size)) ##TODO check how this works!! size is list [196, 196]
+            self.size = (int(size), int(size))
         else:
             self.size = size
         self.padding = padding
@@ -524,7 +524,7 @@ class Scale(object):
 #     def __call__(self, img, mask):
 #         rotate_degree = random.random() * 2 * self.degree - self.degree
 #         #return img.rotate(rotate_degree, Image.BILINEAR), mask.rotate(rotate_degree, Image.NEAREST)
-#         return rotate(img, rotate_degree), rotate(mask, rotate_degree) #TODO border of image should be min()-value
+#         return rotate(img, rotate_degree), rotate(mask, rotate_degree)
 #         #return img.rotate(rotate_degree, torch.nn.Upsample('Bilinear')), mask.rotate(rotate_degree, torch.nn.Upsample('nearest'))
 
 
