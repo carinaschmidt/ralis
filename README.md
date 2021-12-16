@@ -2,27 +2,6 @@
 # Reinforced Active Learning for Medical Image Segmentation (RALMIS)
 Code (https://github.com/ArantxaCasanova/ralis) from the paper [Reinforced Active Learning for Image Segmentation] (https://arxiv.org/abs/2002.06583) adapted to 3D medical images.
 
-## Notes by C Baumgartner for use in Tuebingen ML Cloud
-
-### Additions to base code:
- - add number of slurm job files to `scripts`
- - add a template for running an interactive training to `scripts`
- - make `code_path` an additional argument to prevent hard coded img_paths
- - remove `dataset` from all hardcoded `path` variables in dataset classes
-
-### TODOs to make code run
- - Change paths in `utils/parser.py`
- - Change paths in `scripts/slurm_*` and `scripts/interative_slurm_call_debug.sh` to match system
-
-### Run code on Tue ML Coud Slurm
-To run ralis training execute 
-
-````
-sbatch devel/ralis/scripts/slurm_train_ralis.sh
-````
-
-To run stuff depending on the pre-trained models, don't forget to download them from the Google Drive link below and copy into your checkpoints folder (e.g. `ckpt_seg`)
-
 ## Dependencies 
 - python 3.9
 - numpy 1.20.2
@@ -49,7 +28,6 @@ Furthermore the folder 'scripts' contains the bash scripts that could be used to
 - launch_train_ralis.sh: To train the 'ralis' model.
 - launch_test_ralis.sh: To test the 'ralis' model. 
 
-
 ## Datasets
 Our investigated datasets:
 - Anatomical cardiac structure segmentation dataset [ACDC]: https://www.creatis.insa-lyon.fr/Challenge/acdc/index.html
@@ -57,6 +35,27 @@ Our investigated datasets:
 
 ## Trained models
 To download the trained reinforcement learning agent on the ACDC and BraTS datasets: https://drive.google.com/drive/folders/1SkBdh5HVZsO8Og8dgFSIVKvYiCASCGIY?usp=sharing
+
+## Notes by C Baumgartner for use in Tuebingen ML Cloud
+
+### Additions to base code:
+ - add number of slurm job files to `scripts`
+ - add a template for running an interactive training to `scripts`
+ - make `code_path` an additional argument to prevent hard coded img_paths
+ - remove `dataset` from all hardcoded `path` variables in dataset classes
+
+### TODOs to make code run
+ - Change paths in `utils/parser.py`
+ - Change paths in `scripts/slurm_*` and `scripts/interative_slurm_call_debug.sh` to match system
+
+### Run code on Tue ML Coud Slurm
+To run ralis training execute 
+
+````
+sbatch devel/ralis/scripts/slurm_train_ralis.sh
+````
+
+To run stuff depending on the pre-trained models, don't forget to download them from the Google Drive link below and copy into your checkpoints folder (e.g. `ckpt_seg`)
 
 ## Citation
 If you use this code, please cite the original paper:
