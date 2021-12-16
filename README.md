@@ -56,7 +56,7 @@ Our investigated datasets:
 - Pathological brain tumour segmentation dataset [BraTS18]: https://www.med.upenn.edu/sbia/brats2018/data.html
 
 ## Trained models
-To download the trained agent on ACDC and BraTS: TODO
+To download the trained reinforcement learning agent on the ACDC and BraTS datasets: https://drive.google.com/drive/folders/1SkBdh5HVZsO8Og8dgFSIVKvYiCASCGIY?usp=sharing
 
 ## Citation
 If you use this code, please cite the original paper:
