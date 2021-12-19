@@ -1,36 +1,16 @@
-# Pseudo code for visualising regions
-# load policy net, load labeled set list 
-#net, _, _ = create_models(**kwargs_models)
-#net.eval()
-#net_dict = torch.load(net_checkpoint_path)
-#net.load_state_dict(net_dict)
-#img = myload(path)
-#img = my_to_tensor(img)
-#output, _ = net(img)
-#output = maybe_my_argmax(output)
-from torch.utils import data
-from models.model_utils import create_models, load_models, get_region_candidates, compute_state, select_action, \
-    add_labeled_images, optimize_model_conv
-from data.data_utils import get_data
-from data import acdc_al, brats18_2D_al
-import torch
+"""
+Code for highlighting regions selected by the RL agent in images for ACDC and BraTS2018
+
+Author:
+Carina Schmidt
+"""
 import os
-import utils.parser as parser
 import numpy as np
-from torch.autograd import Variable
 import matplotlib.pyplot as plt
-from matplotlib import rc
-from matplotlib.patches import Rectangle
-from matplotlib import colors
-import matplotlib.cm as cm
-
-#ckpt_path = '/home/baumgartner/cschmidt77/ckpt_seg_acdc'
-#ckpt_path = '/mnt/qb/baumgartner/cschmidt77_data/ckpt_seg_acdc'
-#data_path = '/mnt/qb/baumgartner/cschmidt77_data'
-#code_path = '/home/baumgartner/cschmidt77/devel/ralis'
-#run locally
-#code_path = '/home/carina/baumgartner/cschmidt77/devel/ralis'
-
+import matplotlib.colors as colors
+import matplotlib.patches.Rectangle as Rectangle
+import utils.parser as parser
+from data import acdc, acdc_al, msdHeart, brats18_2D, brats18_2D_al, brats18, brats18_al
 
 def main(args):
     dataset = args.dataset
@@ -39,9 +19,6 @@ def main(args):
     # create colormap for matplotlib
     #plt.rcParams['axes.prop_cycle'] = plt.cycler(color=["#000000","#FFFF00","#FF0000","#10A5F5"]) 
     plt.rcParams['font.size'] = '8'
-    # plt.rc('text', usetex=True)
-    # plt.rc('font', **{'sans-serif': ['lmodern'], 'size': 11})
-    # make a color map of fixed colors
     myColors = colors.ListedColormap(['black', 'blue', 'gold', 'magenta'])
 
     if args.dataset == 'acdc':
@@ -89,11 +66,6 @@ def main(args):
     print("ralis_path: ", ralis_path)
     file_paths = [ralis_path, entropy_path, bald_path, random_path]
 
-# for image: save intensity min and intensity max
-
-# for image:
-# plt.imshow(x, cmin=1.1, cmax=0.9 von imax)
-
     for i, alalgo in enumerate(file_paths):
         print("alalgo: ", alalgo)
         file_path = alalgo
@@ -110,7 +82,6 @@ def main(args):
             print("AL algo not recognised")
 
         for line in file_path:
-            #line = file.readline()
             # get img indices and region coordinates from labelled set
             img_idx, coord_x_left_upper, coord_y_left_upper = line.rstrip('\n').split(',') #removes \n and splits by ,
             img_idx, coord_x_left_upper, coord_y_left_upper = int(img_idx), int(coord_x_left_upper), int(coord_y_left_upper)
@@ -154,8 +125,6 @@ def main(args):
                 img = img[:,:,1]
             print("shape of img: ", img.shape)
             coordinate_pairs = values
-            #region_img = img
-            #region_mask = mask
 
             masked = np.full(mask.shape, 0)
             image_masked = img
@@ -179,12 +148,8 @@ def main(args):
                 coord_x_left_upper = pair[1]
                 coord_y_left_upper = pair[0]
 
-                #print("coord_left_upper (x,y): ", (coord_x_left_upper, coord_y_left_upper))
-
                 coord_x_right_bottom = coord_x_left_upper + args.region_size[1] #region size is here 64, 48
                 coord_y_right_bottom = coord_y_left_upper + args.region_size[0] #region size 40 or 48
-
-                #print("coord right bottom (x,y): ", (coord_x_right_bottom, coord_y_right_bottom))
 
                 # crop regions
                 region_img = img[coord_y_left_upper: coord_y_right_bottom, coord_x_left_upper: coord_x_right_bottom]
@@ -198,25 +163,17 @@ def main(args):
                 image_masked[coord_y_left_upper: coord_y_right_bottom, coord_x_left_upper: coord_x_right_bottom] = region_img
 
                 # Create a Rectangle patch
-                #print("coord_x_left_upper, y_left_upper: ", (coord_x_left_upper, coord_y_left_upper))
-                #print("coord_x_right_bottom, y_right_bottom: ", (coord_x_right_bottom, coord_y_right_bottom))
                 coord_x_left_lower =coord_x_left_upper 
                 coord_y_left_lower =coord_y_left_upper + args.region_size[0]
-                #print("coord_x_left_lower, y_left_lower: ", (coord_x_left_lower, coord_y_left_lower))
-                # (x_low, y_low), width, height (48,40)
                 rect = Rectangle((coord_x_left_lower, coord_y_left_lower),args.region_size[1],args.region_size[0],linewidth=0.8,edgecolor='lime',facecolor='none')
                 # Add the patch to the Axes
                 ax1.add_patch(rect)
                 rect = Rectangle((coord_x_left_lower,coord_y_left_lower),args.region_size[1],args.region_size[0],linewidth=0.8,edgecolor='lime',facecolor='none')
                 ax2.add_patch(rect)
-                #img_copy[coord_y_left_upper: coord_y_right_bottom, coord_x_left_upper: coord_x_right_bottom] = 0  
-                #name = os.path.join('/home/carina/Desktop/show_regions/', al, img_name)
                 name = os.path.join('/home/carina/Desktop/regions_visualisation_RALIS_DQN/brats18-dqn', al, str(i) + "_" + img_name) #str(i))#
-                #name = str(i) + "_" + name 
                 print("name: ", name)
                 plt.savefig(f'{name}.png', bbox_inches='tight')
-                #plt.close()
-                #plt.savefig(f'{name}.png')#, bbox_inches='tight')
+
                 i += 1
     alalgo.close()
 
@@ -235,13 +192,11 @@ def rc_params():
 # labeled_set_0.txt
 # labeled_set_49.txt
 
-
 # #/mnt/qb/baumgartner/cschmidt77_data/ACDC_regionsize_3232/2021-11-19-acdc_3232_train_2patients_ImageNetBackbone_budget_512_lr_0.05_seed_123
 # singularity exec --nv --bind '/mnt/qb/baumgartner/cschmidt77_data/' '/home/carina/tue-slurm-helloworld/ralis.sif' python3 -u '/home/carina/ralis/visualise_regions.py' 
 # --exp-name-toload '2021-11-19-acdc_3232_train_2patients_ImageNetBackbone_budget_512_lr_0.05_seed_123' --checkpointer --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/ACDC_regionsize_3232/'  
 # --data-path '/mnt/qb/baumgartner/cschmidt77_data/' --input-size 128 128 --dataset 'acdc' --al-algorithm 'ralis' --region-size 32 32  
 # --train-batch-size 2 --val-batch-size 1 --exp-name-toload-rl '2021-07-17-train_acdc_ImageNetBackbone_budget_608_lr_0.01_seed_123' --num-each-iter 1 --rl-pool 30 --test
-
 
 # trained DQN:
 #/mnt/qb/baumgartner/cschmidt77_data/exp1b_brats_baselines/2021-10-31-brats18_ImageNetBackbone_stdAug_budget_1536_lr_0.01_seed_55

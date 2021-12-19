@@ -8,15 +8,12 @@ import math
 import torch
 import torch.nn as nn
 from torch.backends import cudnn
-from torch.optim.lr_scheduler import ReduceLROnPlateau, ExponentialLR, MultiStepLR
+from torch.optim.lr_scheduler import ExponentialLR
 
 from models.model_utils import create_models, load_models
 from data.data_utils import get_data
 from utils.final_utils import check_mkdir, create_and_load_optimizers, train, validate, final_test
 import utils.parser as parser
-
-import torch.nn.functional as F
-#from torchgeometry.losses import 
 
 cudnn.benchmark = False
 cudnn.deterministic = True
@@ -63,7 +60,6 @@ def main(args):
                    "dataset": args.dataset,
                    "al_algorithm": 'None'}
     logger, curr_epoch, best_record = load_models(**kwargs_load)
-    #print(net)
     ####------ Load training and validation data ------####
     kwargs_data = {"data_path": args.data_path,
                    "code_path": args.code_path,
@@ -85,15 +81,7 @@ def main(args):
 
     ####------ Create losses ------####
     criterion = nn.CrossEntropyLoss(ignore_index=train_loader.dataset.ignore_label).cuda()
-    #import monai.losses as losses
-    #criterion = losses.Dice()
 
-    # class MyCrossEntropy(nn.CrossEntropyLoss):
-    #     def forward(self, input, target):
-    #         target = target.long()
-    #         return F.cross_entropy(input, target, weight=self.weight, ignore_index=train_loader.dataset.ignore_label, reduction=self.reduction).cuda()
-
-    # criterion = MyCrossEntropy()
     ####------ Create optimizers (and load them if necessary) ------####
     kwargs_load_opt = {"net": net,
                        "opt_choice": args.optimizer,
@@ -119,7 +107,6 @@ def main(args):
 
     if args.train:
         print('Starting training...')
-        #@carina scheduler off
         scheduler = ExponentialLR(optimizer, gamma=0.998)
         net.train()
 
@@ -141,9 +128,8 @@ def main(args):
                 for cl in range(train_loader.dataset.num_classes):
                     info.append(iu_xclass[cl])
                 logger.append(info)
-                #@carina scheduler off
                 scheduler.step()
-                # Early stopping with val jaccard
+                # Early stopping with val jaccard/dice
                 es_counter += 1
                 if val_iu > es_val and not math.isnan(val_iu):
                     torch.save(net.cpu().state_dict(),
@@ -163,8 +149,6 @@ def main(args):
             for epoch in range(curr_epoch, args.epoch_num + 1):
                 print('Epoch %i /%i' % (epoch, args.epoch_num + 1))
                 # adapt train loss,, ...
-                # tr_loss, _, meanDice, meanDiceWT, meanDiceTC, meanDiceET = train(train_loader, net, criterion,
-                #                                 optimizer, supervised=True)
                 tr_loss, _, tr_acc, tr_iu, tr_meanDice = train(train_loader, net, criterion,
                                                 optimizer, supervised=True)
 
@@ -176,9 +160,8 @@ def main(args):
                 info = [epoch, optimizer.param_groups[0]['lr'],
                         tr_loss, tr_acc, tr_meanDice, vl_loss, val_acc, meanDice, meanDiceWT, meanDiceTC, meanDiceET]
                 logger.append(info)
-                #@carina scheduler off
                 scheduler.step()
-                # Early stopping with val jaccard
+                # Early stopping with val jaccard/dice
                 es_counter += 1
                 if meanDice > es_dice and not math.isnan(meanDice):
                     torch.save(net.cpu().state_dict(),
@@ -202,30 +185,8 @@ def main(args):
 if __name__ == '__main__':
     ####------ Parse arguments from console  ------####
     print("torch.cuda.is_available()", torch.cuda.is_available())
-    #gpu=1
-    #device = torch.device(f"cuda:{gpu}" if torch.cuda.is_available() else "cpu")
-    #if torch.cuda.is_available():
-    #    torch.cuda.set_device(device)
-    #torch.cuda.set_device(1)
-    torch.cuda.empty_cache() 
-    import sys
-    print('__Python VERSION:', sys.version)
-    print('__pyTorch VERSION:', torch.__version__)
-    print('__CUDA VERSION') # 1.9.0+cu102
+    torch.cuda.empty_cache()
     from subprocess import call
-    #torch.cuda.set_device(0)
-    # call(["nvcc", "--version"]) does not work
-    print('__CUDNN VERSION:', torch.backends.cudnn.version()) #7605
-    print('__Number CUDA Devices:', torch.cuda.device_count())
-    print('__Devices')
-    call(["nvidia-smi", "--format=csv", "--query-gpu=index,name,driver_version,memory.total,memory.used,memory.free"])
-    print('Active CUDA Device: GPU', torch.cuda.current_device())
-
-    print ('Available devices ', torch.cuda.device_count())
-    print ('Current cuda device ', torch.cuda.current_device())
-
-    print("torch.cuda.is_available()", torch.cuda.is_available())
-    print("torch.version.cuda", torch.version.cuda)
     args = parser.get_arguments()
     main(args)
     torch.cuda.empty_cache() 

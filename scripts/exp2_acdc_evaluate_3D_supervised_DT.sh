@@ -55,7 +55,7 @@ for lr in 0.01 0.05  #60*16=960 regions, 192 is 20%
 
 # for lr in 0.01 0.05  #60*16=960 regions, 192 is 20%
 #     do                                                                              
-#     $exec_command python3 -u $code_path/evaluate_patients_acdc_originalImages.py \
+#     $exec_command python3 -u $code_path/evaluate_patients_acdc.py \
 #     --exp-name "2021-10-15-supervised-acdc_RIRD__lr${lr}_20" --checkpointer \
 #     --ckpt-path $ckpt_path --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  \
 #     --dataset 'acdc' --al-algorithm 'ralis'
@@ -63,7 +63,7 @@ for lr in 0.01 0.05  #60*16=960 regions, 192 is 20%
 
 # for lr in 0.01 0.05  #60*16=960 regions, 192 is 20%
 #     do                                                                              
-#     $exec_command python3 -u $code_path/evaluate_patients_acdc_originalImages.py \
+#     $exec_command python3 -u $code_path/evaluate_patients_acdc.py \
 #     --exp-name "2021-10-15-supervised-acdc_RIRD__lr${lr}_55" --checkpointer \
 #     --ckpt-path $ckpt_path --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  \
 #     --dataset 'acdc' --al-algorithm 'ralis'
@@ -71,7 +71,7 @@ for lr in 0.01 0.05  #60*16=960 regions, 192 is 20%
 
 # for lr in 0.01 0.05  #60*16=960 regions, 192 is 20%
 #     do                                                                              
-#     $exec_command python3 -u $code_path/calculate3Ddice_patientwise.py \
+#     $exec_command python3 -u $code_path/calculate3Ddice_patientwise_acdc.py \
 #     --exp-name "2021-10-15-supervised-acdc_RIRD__lr${lr}_20" --checkpointer \
 #     --ckpt-path "_FINAL_ACDC_exp2_3Devaluation_supervised" --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  \
 #     --dataset 'acdc' --al-algorithm 'ralis'
@@ -79,7 +79,7 @@ for lr in 0.01 0.05  #60*16=960 regions, 192 is 20%
 
 # for lr in 0.01 0.05  #60*16=960 regions, 192 is 20%
 #     do                                                                              
-#     $exec_command python3 -u $code_path/calculate3Ddice_patientwise.py \
+#     $exec_command python3 -u $code_path/calculate3Ddice_patientwise_acdc.py \
 #     --exp-name "2021-10-15-supervised-acdc_RIRD__lr${lr}_55" --checkpointer \
 #     --ckpt-path "_FINAL_ACDC_exp2_3Devaluation_supervised" --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  \
 #     --dataset 'acdc' --al-algorithm 'ralis'

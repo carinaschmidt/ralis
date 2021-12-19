@@ -1,14 +1,9 @@
-from models.model_utils import create_models, load_models, get_region_candidates, compute_state, select_action, \
-    add_labeled_images, optimize_model_conv
-from data.data_utils import get_data
-from data import acdc_al
+from models.model_utils import create_models
 import torch
 import os
 import utils.parser as parser
 import numpy as np
 from torch.autograd import Variable
-import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
 def main(args):
@@ -42,9 +37,7 @@ def main(args):
         mask_path_new = os.path.join(mask_path, sl)
         img, mask = np.load(img_path_new), np.load(mask_path_new)
         img, mask = torch.from_numpy(img), torch.from_numpy(mask)
-        #image = np.transpose(img, (2,0,1))
-        #input_img = torch.from_numpy(image) #torch.Size([4, 256, 256])
-        #print("input_img: ", input_img)
+
         input_img = torch.stack((img, img, img), dim=0)
         if input_img.dim() == 3:
             img_sz = input_img.size()
@@ -53,10 +46,8 @@ def main(args):
         else:
             print("input_img.dim: ", input_img.dim())
         outputs, _ = net(input_img.float())
-        #print("before output.data: ",outputs.min())
         print(outputs.min())
         print(outputs.max())
-        #predictions_py = torch.squeeze(outputs) #removes dimension of size 1
         pred_cpu = outputs.cpu()
         pred = np.squeeze(pred_cpu.detach())#[1,4,160,192]
 
@@ -80,9 +71,6 @@ def main(args):
         name = 'slice_%s' %(sl)
         out_file_name = os.path.join(output_folder, 'slice', name)
         np.save(out_file_name,sl, allow_pickle=True, fix_imports=True)
-
-
-
 
 def compute_entropy_seg(args, im_t, net):
     '''
@@ -113,5 +101,5 @@ if __name__ == '__main__':
     ####------ Parse arguments from console  ------####
     args = parser.get_arguments()
     main(args)
-
+    # command to execute
     #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/visualise_entropy_map.py --exp-name '2021-10-26-train_acdc_ImageNetBackbone_budget_192_lr_0.05_3patients_seed234' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp4_acdc_train_DT_small/' --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algorithm 'ralis'

@@ -2,7 +2,7 @@
 # Christian F. Baumgartner (c.f.baumgartner@gmail.com)
 # Lisa M. Koch (lisa.margret.koch@gmail.com)
 
-# adapted by Carina for RALIS
+# adapted by Carina Schmidt for RALIS Code
 
 import os
 import glob
@@ -307,15 +307,15 @@ if __name__ == '__main__':
     score_data(input_folder=root, output_folder=output_folder, model_path=model_path, exp_config=args, do_postprocessing=True,
     gt_exists=True, evaluate_all=True, use_iter=None)
 
-  # singularity exec --nv --bind /mnt/qb/baumgartner ralis.sif python3 -u devel/ralis/evaluate_patients_acdc_originalImages.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_train_ImageNetBackbone'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
+  # singularity exec --nv --bind /mnt/qb/baumgartner ralis.sif python3 -u devel/ralis/evaluate_patients_acdc.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_train_ImageNetBackbone'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
 
   #locally:
-  #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/evaluate_patients_acdc_originalImages.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_train_ImageNetBackbone' --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
+  #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/evaluate_patients_acdc.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_train_ImageNetBackbone' --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
 
-  # singularity exec --nv --bind /mnt/qb/baumgartner ralis.sif python3 -u devel/ralis/evaluate_patients_acdc_originalImages.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_train_ImageNetBackbone'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algorithm 'ralis'
+  # singularity exec --nv --bind /mnt/qb/baumgartner ralis.sif python3 -u devel/ralis/evaluate_patients_acdc.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_train_ImageNetBackbone'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algorithm 'ralis'
 
   # locally:
-# singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/evaluate_patients_acdc_originalImages.py --exp-name '2021-11-05-test_acdc_ImageNetBackbone_budget_3568_lr_0.05_3patients_seed_123' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/pat2' --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algorithm 'ralis'
+# singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/evaluate_patients_acdc.py --exp-name '2021-11-05-test_acdc_ImageNetBackbone_budget_3568_lr_0.05_3patients_seed_123' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/pat2' --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algorithm 'ralis'
 
 
-#singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/evaluate_patients_acdc_originalImages.py --exp-name '2021-11-05-test_acdc_ImageNetBackbone_budget_3568_lr_0.05_3patients_seed_123' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp4_acdc_train_DT_small' --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algorithm 'ralis'
+#singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/evaluate_patients_acdc.py --exp-name '2021-11-05-test_acdc_ImageNetBackbone_budget_3568_lr_0.05_3patients_seed_123' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp4_acdc_train_DT_small' --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algorithm 'ralis'

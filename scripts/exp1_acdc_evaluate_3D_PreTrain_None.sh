@@ -22,7 +22,7 @@ exec_command="singularity exec --nv --bind $data_path $sif_path"
 
 # for budget in 64 128 592 960 1184 1424 1904 2384 3568
 #     do     
-#     $exec_command python3 -u $code_path/evaluate_patients_acdc_originalImages.py --exp-name "2021-11-08-acdc_test_RIRD_budget_${budget}_lr_0.05_seed_${SLURM_ARRAY_TASK_ID}" --checkpointer \
+#     $exec_command python3 -u $code_path/evaluate_patients_acdc.py --exp-name "2021-11-08-acdc_test_RIRD_budget_${budget}_lr_0.05_seed_${SLURM_ARRAY_TASK_ID}" --checkpointer \
 #     --ckpt-path $ckpt_path --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  \
 #     --dataset 'acdc' --al-algorithm 'ralis'
 #     done

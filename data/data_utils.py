@@ -1,5 +1,3 @@
-from random import Random
-import random
 import torchvision.transforms as standard_transforms
 from torch.utils.data import DataLoader
 
@@ -7,9 +5,7 @@ import utils.joint_transforms as joint_transforms
 import utils.joint_transforms_acdc as joint_transforms_acdc
 import utils.joint_transforms_medical as joint_transforms_medical
 import utils.transforms as extended_transforms
-import utils.transforms_acdc as extended_transforms_acdc
-from data import cityscapes, gtav, cityscapes_al, cityscapes_al_splits, camvid, camvid_al, acdc, acdc_al, msdHeart, brats18_2D, brats18_2D_al, brats18, brats18_al
-import numpy as np
+from data import cityscapes, acdc, acdc_al, msdHeart, brats18_2D, brats18_2D_al, brats18, brats18_al
 import utils.parser as parser
 import torchio as tio
 
@@ -20,74 +16,11 @@ def get_data(data_path, code_path, tr_bs, vl_bs, n_workers=0, scale_size=0, inpu
     print('Loading data...')
     args = parser.get_arguments()
     candidate_set = None
-    #import ipdb
-    #ipdb.set_trace()
-    #, train_joint_transform_region, train_joint_transform_acdc_al, train_joint_transform_region_3D = \
     input_transform, target_transform, train_joint_transform, val_joint_transform, al_train_joint_transform, train_joint_transform_region_3D = \
     get_transforms(scale_size, input_size, region_size, supervised, test, al_algorithm, full_res, dataset)
 
-
-    # To train pre-trained segmentation network and upper bounds.
     if supervised:
-        if 'gta' in dataset:
-            train_set = gtav.GTAV('fine', 'train',
-                                  data_path=data_path,
-                                  joint_transform=train_joint_transform,
-                                  transform=input_transform,
-                                  target_transform=target_transform,
-                                  camvid=True if dataset == 'gta_for_camvid' else False,
-                                  acdc=True if dataset == 'gta_for_acdc' else False)
-            val_set = gtav.GTAV('fine', 'val',
-                                data_path=data_path,
-                                joint_transform=val_joint_transform,
-                                transform=input_transform,
-                                target_transform=target_transform,
-                                camvid=True if dataset == 'gta_for_camvid' else False,
-                                acdc=True if dataset == 'gta_for_acdc' else False)
-        elif dataset == 'camvid':
-            train_set = camvid.Camvid('fine', 'train',
-                                      data_path=data_path,
-                                      code_path=code_path,
-                                      joint_transform=train_joint_transform,
-                                      transform=input_transform,
-                                      target_transform=target_transform, acdc=False)
-            val_set = camvid.Camvid('fine', 'val',
-                                    data_path=data_path,
-                                    code_path=code_path,
-                                    joint_transform=val_joint_transform,
-                                    transform=input_transform,
-                                    target_transform=target_transform, acdc=False)
-        elif dataset == 'camvid_subset':
-            train_set = camvid.Camvid('fine', 'train',
-                                      data_path=data_path,
-                                      code_path=code_path,
-                                      joint_transform=train_joint_transform,
-                                      transform=input_transform,
-                                      target_transform=target_transform, subset=True, acdc=False)
-            val_set = camvid.Camvid('fine', 'val',
-                                    data_path=data_path,
-                                    code_path=code_path,
-                                    joint_transform=val_joint_transform,
-                                    transform=input_transform,
-                                    target_transform=target_transform, acdc=False)
-        # using camvid dataset for pre-training of ACDC
-        elif dataset == 'camvid_for_acdc':
-            train_set = camvid.Camvid('fine', 'train',
-                                      data_path=data_path,
-                                      code_path=code_path,
-                                      joint_transform=train_joint_transform,
-                                      transform=input_transform,
-                                      target_transform=target_transform,
-                                      acdc=True if dataset == 'camvid_for_acdc' else False)
-            val_set = camvid.Camvid('fine', 'val',
-                                    data_path=data_path,
-                                    code_path=code_path,
-                                    joint_transform=val_joint_transform,
-                                    transform=input_transform,
-                                    target_transform=target_transform,
-                                    acdc=True if dataset == 'camvid_for_acdc' else False)
-        # @carina added acdc part for pre-training of segmentation network!
-        elif dataset == 'acdc':
+        if 'acdc' in dataset:
             args = parser.get_arguments()
             if "allPatients" in args.exp_name:
                 subset = False
@@ -100,13 +33,6 @@ def get_data(data_path, code_path, tr_bs, vl_bs, n_workers=0, scale_size=0, inpu
                                       joint_transform=train_joint_transform,
                                       transform=input_transform,
                                       target_transform=target_transform, subset=subset)
-            
-            # train_set = acdc.ACDC('fine', 'train',
-            #                           data_path=data_path,
-            #                           code_path=code_path,
-            #                           joint_transform=train_joint_transform,
-            #                           transform=input_transform,
-            #                           target_transform=target_transform, subset=False) #using all train data, subset=True using D_T
             val_set = acdc.ACDC('fine', 'val',
                                     data_path=data_path,
                                     code_path=code_path,
@@ -129,33 +55,6 @@ def get_data(data_path, code_path, tr_bs, vl_bs, n_workers=0, scale_size=0, inpu
                                     transform=input_transform,
                                     target_transform=target_transform, subset=False)
             print("For validation using: ", train_joint_transform)
-        elif dataset == 'cs_upper_bound':
-            train_set = cityscapes_al_splits.CityScapes_al_splits('fine', 'train',
-                                                                  data_path=data_path,
-                                                                  code_path=code_path,
-                                                                  joint_transform=train_joint_transform,
-                                                                  transform=input_transform,
-                                                                  target_transform=target_transform, supervised=True)
-            val_set = cityscapes.CityScapes('fine', 'val',
-                                            data_path=data_path,
-                                            code_path=code_path,
-                                            joint_transform=val_joint_transform,
-                                            transform=input_transform,
-                                            target_transform=target_transform)
-
-        elif dataset == 'cityscapes_subset':
-            train_set = cityscapes_al_splits.CityScapes_al_splits('fine', 'train',
-                                                                  data_path=data_path,
-                                                                  code_path=code_path,
-                                                                  joint_transform=train_joint_transform,
-                                                                  transform=input_transform,
-                                                                  target_transform=target_transform, subset=True)
-            val_set = cityscapes.CityScapes('fine', 'val',
-                                            data_path=data_path,
-                                            code_path=code_path,
-                                            joint_transform=val_joint_transform,
-                                            transform=input_transform,
-                                            target_transform=target_transform)
 
         elif dataset == 'brats18':
             if args.modality == '2D':
@@ -164,19 +63,7 @@ def get_data(data_path, code_path, tr_bs, vl_bs, n_workers=0, scale_size=0, inpu
                     subset = False
                 else:
                     subset = True
-                
-                # train_set = brats18_2D.BraTS18_2D('fine', 'train',
-                #                         data_path=data_path,
-                #                         code_path=code_path,
-                #                         subset=subset)
-                # print("length of train_set: ", len(train_set))
-                
-                # val_set = brats18_2D.BraTS18_2D('fine', 'val',
-                #                     data_path=data_path,
-                #                     code_path=code_path,
-                #                    )
-                # print("length of val_set: ", len(val_set))
-                
+
                 train_set = brats18_2D.BraTS18_2D('fine', 'train',
                                         data_path=data_path,
                                         code_path=code_path,
@@ -217,65 +104,7 @@ def get_data(data_path, code_path, tr_bs, vl_bs, n_workers=0, scale_size=0, inpu
                                             target_transform=target_transform)
     # To train AL methods
     else:
-        if dataset == 'cityscapes':
-            if al_algorithm == 'ralis' and not test:
-                split = 'train'
-            else:
-                split = 'test'
-            train_set = cityscapes_al.CityScapes_al('fine', 'train',
-                                                    data_path=data_path,
-                                                    code_path=code_path,
-                                                    joint_transform=train_joint_transform,
-                                                    joint_transform_al=al_train_joint_transform,
-                                                    transform=input_transform,
-                                                    target_transform=target_transform, num_each_iter=num_each_iter,
-                                                    only_last_labeled=only_last_labeled,
-                                                    split=split, region_size=region_size)
-            
-            candidate_set = cityscapes_al.CityScapes_al('fine', 'train',
-                                                        data_path=data_path,
-                                                        code_path=code_path,
-                                                        joint_transform=None,
-                                                        candidates_option=True,
-                                                        transform=input_transform,
-                                                        target_transform=target_transform, split=split,
-                                                        region_size=region_size)
-            # no 'split' in _al_splits train  -> d_r!
-            val_set = cityscapes_al_splits.CityScapes_al_splits('fine', 'train',
-                                                                data_path=data_path,
-                                                                code_path=code_path,
-                                                                joint_transform=val_joint_transform,
-                                                                transform=input_transform,
-                                                                target_transform=target_transform)
-
-        elif dataset == 'camvid':
-            train_set = camvid_al.Camvid_al('fine', 'train',
-                                            data_path=data_path,
-                                            code_path=code_path,
-                                            joint_transform=train_joint_transform,
-                                            transform=input_transform,
-                                            target_transform=target_transform, num_each_iter=num_each_iter,
-                                            only_last_labeled=only_last_labeled,
-                                            split='train' if al_algorithm == 'ralis' and not test else 'test',
-                                            region_size=region_size)
-            candidate_set = camvid_al.Camvid_al('fine', 'train',
-                                                data_path=data_path,
-                                                code_path=code_path,
-                                                joint_transform=None,
-                                                candidates_option=True,
-                                                transform=input_transform,
-                                                target_transform=target_transform,
-                                                split='train' if al_algorithm == 'ralis' and not test else 'test',
-                                                region_size=region_size)
-
-            val_set = camvid.Camvid('fine', 'val',
-                                    data_path=data_path,
-                                    code_path=code_path,
-                                    joint_transform=val_joint_transform,
-                                    transform=input_transform,
-                                    target_transform=target_transform)
-        # @carina added ACDC
-        elif dataset == 'acdc':
+        if dataset == 'acdc':
             # d_V! if "test"
             # mode is 'train', split is 'test' for slurm_test.sh, 
             # train_set used to train the segmentation net
@@ -357,31 +186,21 @@ def get_data(data_path, code_path, tr_bs, vl_bs, n_workers=0, scale_size=0, inpu
                 print("Val_set: ")
                 val_set = brats18_al.BraTS18_al(mode='val')
 
-    # import ipdb
-    # ipdb.set_trace()
-    #train_set = candidate_set
     print("before train loader: ", len(train_set))
     print("before val loader: ", len(val_set))
     train_loader = DataLoader(train_set,
                               batch_size=tr_bs,
                               num_workers=n_workers, shuffle=True,
                               drop_last=False)
-
-    #print("Length of train loader: ", len(train_loader))
     val_loader = DataLoader(val_set,
                             batch_size=vl_bs,
                             num_workers=n_workers, shuffle=False)
-    
-    #print("Length of val loader: ", len(val_loader))
-
     return train_loader, train_set, val_loader, candidate_set
 
 
 def get_transforms(scale_size, input_size, region_size, supervised, test, al_algorithm, full_res, dataset):
     mean_std = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     train_joint_transform_region_3D = None
-    input_transform = None
-    target_transform = None
     train_joint_transform = None
     val_joint_transform = None
     al_train_joint_transform =  None
@@ -435,27 +254,24 @@ def get_transforms(scale_size, input_size, region_size, supervised, test, al_alg
                             joint_transforms_medical.DoubleCropOrPad(input_size),
                             joint_transforms_medical.DoubleHorizontalFlip(p=0.5)
                         ])
-                          
-               
-     
+
             else: #not supervised (with crop region instead of crop or pad)       
-                if args.newAugmentations: # use GI/GD
+                if args.newAugmentations:
                     if 'acdc' in dataset:
                         print("using new augmentations RI/RD")
                         train_joint_transform = joint_transforms_acdc.ComposeRegion([
-                                #joint_transforms_medical.DoubleCropOrPad(input_size),
                                 joint_transforms_acdc.RandomCropRegion(input_size, region_size=region_size), 
                                 joint_transforms_acdc.RandomHorizontallyFlip02(),
-                                joint_transforms_medical.DoubleRandomRotate(p=0.2), #scaling
+                                joint_transforms_medical.DoubleRandomRotate(p=0.2),
                                 joint_transforms_medical.DoubleRandomScale(p=0.2),
-                                joint_transforms_medical.DoubleRand2DElastic(p=0.2, input_size=input_size), #0.2
-                                joint_transforms_medical.ContrastBrightnessAdjustment(p=0.2) #0.2
+                                joint_transforms_medical.DoubleRand2DElastic(p=0.2, input_size=input_size),
+                                joint_transforms_medical.ContrastBrightnessAdjustment(p=0.2)
                                 # 0.5 random flip, 0.25 elastic und contrast/brightness
                             ])
                     elif 'brats18' in dataset:
                        train_joint_transform = joint_transforms_medical.Compose([
-                                joint_transforms_medical.DoubleCropRandomRegion(input_size, region_size=region_size), #from MonAI: 
-                                joint_transforms_medical.DoubleRandomRotate(p=0.2), #scaling
+                                joint_transforms_medical.DoubleCropRandomRegion(input_size, region_size=region_size),
+                                joint_transforms_medical.DoubleRandomRotate(p=0.2),
                                 joint_transforms_medical.DoubleRandomScale(p=0.2),
                                 joint_transforms_medical.DoubleHorizontalFlip(p=0.2),
                                 joint_transforms_medical.DoubleRand2DElastic(p=0.2, input_size=input_size),
@@ -466,13 +282,13 @@ def get_transforms(scale_size, input_size, region_size, supervised, test, al_alg
                     print("using standard augmentations")
                     # ralis augmentations
                     if 'acdc' in dataset:
-                        train_joint_transform = joint_transforms_acdc.ComposeRegion([ #here: Compose Region!
+                        train_joint_transform = joint_transforms_acdc.ComposeRegion([
                             joint_transforms_acdc.RandomCropRegion(input_size, region_size=region_size), 
                             joint_transforms_acdc.RandomHorizontallyFlip()
                         ])
                     elif 'brats18' in dataset:
                         train_joint_transform = joint_transforms_medical.Compose([
-                            joint_transforms_medical.DoubleCropRandomRegion(input_size, region_size=region_size), #from MonAI: 
+                            joint_transforms_medical.DoubleCropRandomRegion(input_size, region_size=region_size),
                             joint_transforms_medical.DoubleHorizontalFlip(p=0.5),
                         ])
                
@@ -495,8 +311,8 @@ def get_transforms(scale_size, input_size, region_size, supervised, test, al_alg
             print('(Data loading) No crops nor scale_size in validation')
             if supervised:
                 train_joint_transform = joint_transforms_acdc.Compose([
-                     joint_transforms_medical.DoubleScale(scale_size), #from MonAI: 
-                     joint_transforms_medical.DoubleRandomRotate(p=0.2), #scaling
+                     joint_transforms_medical.DoubleScale(scale_size),
+                     joint_transforms_medical.DoubleRandomRotate(p=0.2),
                      joint_transforms_medical.DoubleRandomScale(p=0.2),
                      joint_transforms_medical.DoubleHorizontalFlip(p=0.2),
                      joint_transforms_medical.DoubleRand2DElastic(p=0.2, input_size=input_size),
@@ -524,15 +340,10 @@ def get_transforms(scale_size, input_size, region_size, supervised, test, al_alg
                     })
                 ])
 
-            if dataset == 'gta_for_camvid':
-                val_joint_transform = joint_transforms_acdc.ComposeRegion([
-                    joint_transforms_acdc.Scale(scale_size)])
-            else:
-                val_joint_transform = None
-        input_transform = None
-        target_transform = None
 
-    else:
+            val_joint_transform = None
+
+    else: # either not 2D data or not ACDC or BraTS data
         train_joint_transform_region = None
         train_joint_transform_acdc_al = None
         train_joint_transform_region_3D = None
@@ -546,21 +357,11 @@ def get_transforms(scale_size, input_size, region_size, supervised, test, al_alg
                     joint_transforms.RandomCrop(input_size),
                     joint_transforms.RandomHorizontallyFlip()
                 ])
-                # old transforms
-                # train_joint_transform = joint_transforms_acdc.Compose([
-                #     joint_transforms_acdc.RandomCrop(input_size),
-                #     joint_transforms_acdc.RandomHorizontallyFlip()
-                # ])
             else:
                 train_joint_transform = joint_transforms.ComposeRegion([
                     joint_transforms.RandomCropRegion(input_size, region_size=region_size),
                     joint_transforms.RandomHorizontallyFlip()
                 ])
-                # old transforms
-                # train_joint_transform = joint_transforms_acdc.ComposeRegion([
-                #     joint_transforms_acdc.RandomCropRegion(input_size, region_size=region_size),
-                #     joint_transforms_acdc.RandomHorizontallyFlip()
-                # ])
             if (not test and al_algorithm == 'ralis') and not full_res:
                 val_joint_transform = joint_transforms.Scale(256)
             else:
@@ -606,4 +407,4 @@ def get_transforms(scale_size, input_size, region_size, supervised, test, al_alg
     target_transform = None, 
     input_transform = None
     #val_joint_transform = None
-    return input_transform, target_transform, train_joint_transform, val_joint_transform, al_train_joint_transform, train_joint_transform_region_3D #, train_joint_transform_region#, train_joint_transform_acdc_al, 
+    return input_transform, target_transform, train_joint_transform, val_joint_transform, al_train_joint_transform, train_joint_transform_region_3D

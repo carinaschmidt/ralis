@@ -215,12 +215,12 @@ if __name__ == '__main__':
 
     calculate_and_save_dice_score_3D(post_processing)
 
-    # singularity exec --nv --bind /mnt/qb/baumgartner ralis.sif python3 -u devel/ralis/calculate3Ddice_patientwise.py --exp-name '2021-10-11-supervised-acdc_allPatients_stdAug_ImageNetBackbone_lr0.05_123' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_supervised_dice'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
+    # singularity exec --nv --bind /mnt/qb/baumgartner ralis.sif python3 -u devel/ralis/calculate3Ddice_patientwise_acdc.py --exp-name '2021-10-11-supervised-acdc_allPatients_stdAug_ImageNetBackbone_lr0.05_123' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_supervised_dice'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
 
 
 
-    #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/calculate3Ddice_patientwise.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
+    #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/calculate3Ddice_patientwise_acdc.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
 
-    #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/calculate3Ddice_patientwise.py --exp-name '2021-11-07-test_acdc_ImageNetBackbone_budget_3568_lr_0.05_3patients_seed_123'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
+    #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/calculate3Ddice_patientwise_acdc.py --exp-name '2021-11-07-test_acdc_ImageNetBackbone_budget_3568_lr_0.05_3patients_seed_123'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
 
         #### evaluation classes

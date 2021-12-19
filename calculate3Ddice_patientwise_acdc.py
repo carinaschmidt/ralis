@@ -1,21 +1,16 @@
-# Author:
-# Carina Schmidt
+"""
+Code for calculating the 3D Dice score for the BraTS2018 dataset
 
-import torch
+Author:
+Carina Schmidt
+"""
 import numpy as np
 import os
 import glob
 import utils.parser as parser
-from models.model_utils import create_models
-from torch.autograd import Variable
 import nibabel as nib
-from skimage import transform
-
 from sklearn.metrics import f1_score
 from utils.logger import Logger
-import matplotlib.pyplot as plt
-import time
-
 
 def calculate_and_save_dice_score_3D(post_processing_dir):#, pred_dir):
     """calculate dice score between 3D volumes and save to file in given directory
@@ -31,7 +26,6 @@ def calculate_and_save_dice_score_3D(post_processing_dir):#, pred_dir):
     logger = Logger(log_file_path)
     logger.set_names(log_columns)
     i = 0
-    #iterate over all frames in predicted folder
 
     mean_dice_score_all_volumes = []
     dsc_background = []
@@ -126,10 +120,10 @@ if __name__ == '__main__':
 
     calculate_and_save_dice_score_3D(post_processing)
 
-    # singularity exec --nv --bind /mnt/qb/baumgartner ralis.sif python3 -u devel/ralis/calculate3Ddice_patientwise.py --exp-name '2021-10-11-supervised-acdc_allPatients_stdAug_ImageNetBackbone_lr0.05_123' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_supervised_dice'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
+    # singularity exec --nv --bind /mnt/qb/baumgartner ralis.sif python3 -u devel/ralis/calculate3Ddice_patientwise_acdc.py --exp-name '2021-10-11-supervised-acdc_allPatients_stdAug_ImageNetBackbone_lr0.05_123' --checkpointer  --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_supervised_dice'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
 
 
 
-    #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/calculate3Ddice_patientwise.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
+    #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/calculate3Ddice_patientwise_acdc.py --exp-name '2021-10-11-acdc_test_ep49_RIRD_ImageNetBackbone_lr_0.01_budget_128_seed_77'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
 
-    #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/calculate3Ddice_patientwise.py --exp-name '2021-11-07-test_acdc_ImageNetBackbone_budget_3568_lr_0.05_3patients_seed_123'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'
+    #singularity exec --nv --bind /mnt/qb/baumgartner tue-slurm-helloworld/ralis.sif python3 -u ralis/calculate3Ddice_patientwise_acdc.py --exp-name '2021-11-07-test_acdc_ImageNetBackbone_budget_3568_lr_0.05_3patients_seed_123'  --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algo 'ralis'

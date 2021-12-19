@@ -4,8 +4,7 @@ Code for evaluation of acdc metrics. Writes full report of experiment performanc
 Authors:
 Christian F. Baumgartner (c.f.baumgartner@gmail.com)
 Lisa. M. Koch (lisa.margret.koch@gmail.com)
-
-Extended by Carina
+Extended by Carina Schmidt
 
 Extended from code made available by
 author: Clément Zotti (clement.zotti@usherbrooke.ca)
@@ -20,9 +19,6 @@ import re
 import pandas as pd
 from medpy.metric.binary import hd, dc, assd
 import numpy as np
-
-
-
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -39,8 +35,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 #
 def conv_int(i):
     return int(i) if i.isdigit() else i
-
-
 
 def natural_order(sord):
     """
@@ -104,9 +98,6 @@ def compute_metrics_on_directories_raw(dir_gt, dir_pred):
 
         # calculate measures for each structure
         for struc in [3,1,2]:
-            # import ipdb
-            # ipdb.set_trace()
-
             gt_binary = (gt == struc) * 1
             pred_binary = (pred == struc) * 1
 
@@ -116,8 +107,6 @@ def compute_metrics_on_directories_raw(dir_gt, dir_pred):
             vol_list.append(volpred)
             vol_err_list.append(volpred - volgt)
 
-            # import ipdb
-            # ipdb.set_trace()
             if np.sum(gt_binary) == 0 and np.sum(pred_binary) == 0:
                 dices_list.append(1)
                 assd_list.append(0)
@@ -381,9 +370,8 @@ if __name__ == "__main__":
     print("path_gt: ", path_gt)
     print("path_pred: ", path_pred)
     main(path_gt, path_pred, path_eval)
-# exp-name: /mnt/qb/baumgartner/cschmidt77_data/_FINAL_ACDC_exp4_3D_baselines_ralis/2021-11-03-acdc_ImageNetBackbone_baseline_entropy_budget_1184_seed_77
 
-
+# Compute metrics on SLURM host
 #singularity exec --nv --bind /mnt/qb/baumgartner ralis.sif python3 -u devel/ralis/metrics_acdc.py --exp-name '_FINAL_ACDC_exp4_3D_baselines_ralis/2021-11-03-acdc_ImageNetBackbone_baseline_entropy_budget_1184_seed_77' --checkpointer --data-path '/mnt/qb/baumgartner/cschmidt77_data/'  --dataset 'acdc' --al-algorithm 'ralis'
 # --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/exp2_acdc_supervised_dice' 
 

@@ -2,47 +2,16 @@
 # Christian F. Baumgartner (c.f.baumgartner@gmail.com)
 # Lisa M. Koch (lisa.margret.koch@gmail.com)
 
-# adapted by Carina for RALIS and BraTS data
+# adapted by Carina Schmidt for RALIS and BraTS data
 
 import os
-import glob
 import numpy as np
-import logging
 import torch
 from torch.autograd import Variable
 from models.model_utils import create_models
-
-import argparse
-#import metrics_acdc
-import time
-from skimage import transform
 import nibabel as nib
-
-import utils
-import image_utils
 import utils.parser as parser
-import h5py    
-import pandas as pd
-
 import torch.nn.functional as F
-
-# test images 2D BraTS npy:  /mnt/qb/baumgartner/cschmidt77_data/BraTS2018/TrainingData/volumes_2D/test
-# ground truth 3D BraTS npy: /mnt/qb/baumgartner/cschmidt77_data/BraTS2018/TrainingData/volumes/test
-
-# ground truth 2D BraTS npy: /mnt/qb/baumgartner/cschmidt77_data/BraTS2018/TrainingData/gts_2D/test
-# ground truth 3D BraTS npy:  /mnt/qb/baumgartner/cschmidt77_data/BraTS2018/TrainingData/gts/test
-
-# flair.nii.gz: /mnt/qb/baumgartner/rawdata/BraTS2018/TrainingData/LGG/Brats18_2013_0_1/Brats18_2013_0_1_flair.nii.gz
-# OR: der Reihe nach die 285 patients in: /mnt/qb/baumgartner/rawdata/BraTS2018_train/HGG_and_LGG/
-# /Brats18_2013_0_1/Brats18_2013_0_1_flair.nii.gz
-# segmentation: /mnt/qb/baumgartner/rawdata/BraTS2018/TrainingData/LGG/Brats18_2013_0_1/Brats18_2013_0_1_seg.nii.gz
-
-
-# what goes in model: 2D images
-# we get 2D predictions
-# stack 2D predictions to 3D npy
-# convert 3D npy to Nifti
-# compare 3D prediction to 3D ground truth
 
 
 def score_data(root,  pat3D_dir, pat3D_gt_dir,output_folder, exp_config):
@@ -235,16 +204,6 @@ def compute_entropy_seg(args, im_t, net):
 if __name__ == '__main__':
     args = parser.get_arguments()
     root = '/mnt/qb/baumgartner/cschmidt77_data/BraTS2018/TrainingData/'
-    #exp_name = '2021-10-11-supervised-acdc_allPatients_stdAug_ImageNetBackbone_lr0.05_123/' 
-    #exp_name = '2021-10-11-acdc_test_ep49_stdAug_ImageNetBackbone_lr_0.05_budget_1904_seed_234/'
-    #output_folder = '/mnt/qb/baumgartner/cschmidt77_data/evaluation_BraTS18/' + args.exp_name
-    # where the gt volume masks are located
-    #post_processing_dir = '/mnt/qb/baumgartner/cschmidt77_data/acdc_postproc/2021-12-15-3D_dice' 
-    # where the predictions of loaded model are located
-    #pred_dir = os.path.join(post_processing_dir, args.exp_name)
-
-    # checkpoint path
-    #seg_net_path = '/mnt/qb/baumgartner/cschmidt77_data/exp2b_brats18_supervised/'
 
     pat3D = 'volumes/test/'
     pat3D_labels = 'gts/test/'

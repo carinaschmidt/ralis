@@ -86,17 +86,6 @@ def load_patient_frames(input_folder, pat_train_test_val, size, target_resolutio
                 file_dir_name = file.split('.')[0]
                 # gives frame number (and gt)
                 frame = file_dir_name.split('frame')[-1]
-
-                # save codes for either systole or diastole to cardiac phase list (4 codes per patient)
-                # if str(systole_frame) in frame:
-                #     cardiac_phase_list.append(1)  # 1 == systole
-                # elif str(diastole_frame) in frame:
-                #     cardiac_phase_list.append(2)  # 2 == diastole
-                # else:
-                #     #should not occur
-                #     cardiac_phase_list.append(0)  # 0 means other phase
-                # load image data (nii_data contains nimg.get_data(), nimg.affine, nimg.header)
-                # in nimg.header is a structarray with i.a. info about number of pixels and resolution 
                 nii_data = utils_acdc.load_nii(file)
                 # nimg.get_data() is in nii_data[0]
                 img_data = nii_data[0].copy()   
@@ -137,23 +126,13 @@ def load_patient_frames(input_folder, pat_train_test_val, size, target_resolutio
                                                              multichannel=False,
                                                              mode='constant') 
 
-                        mask_cropped = crop_or_pad_slice_to_size(mask_rescaled, nx, ny).astype(np.uint8)  
-                        #mask_cropped = slice_mask
-                        mask_list.append(mask_cropped)     
-
-                        ########################## check if image from array and  RGB is needed !    
-                        #im = Image.fromarray(mask_cropped)           
-                        #if im.mode != 'RGB':
-                         #   im = im.convert('RGB')  
-                        # frame[0:2] to not save '_gt'
-                        #data_file_name = 'pat_%s_diag_%s_frame_%s_slice_%s.png' % (str(pat_id), infos['Group'], str(frame[0:2]), str(z))
+                        mask_cropped = crop_or_pad_slice_to_size(mask_rescaled, nx, ny).astype(np.uint8)
+                        mask_list.append(mask_cropped)
                         data_file_name = 'pat_%s_diag_%s_frame_%s_slice_%s.npy' % (str(pat_id), infos['Group'], str(frame[0:2]), str(z))
                         # determines to which data split to save
                         data_split = pat_train_test_val[pat_id]
                         # save mask to gt folder
-                        #im.save(os.path.join(preprocessing_folder, 'gt', data_split, data_file_name))    
                         data_file_path = os.path.join(preprocessing_folder, 'gt', data_split, data_file_name)
-                        #print(data_file_path)
                         # create new npy file to save data splits
                         np.save(data_file_path, mask_cropped)        
 
@@ -171,11 +150,6 @@ def load_patient_frames(input_folder, pat_train_test_val, size, target_resolutio
                         slice_cropped = crop_or_pad_slice_to_size(slice_rescaled, nx, ny)
                         slice_cropped = utils_acdc.normalise_image(slice_cropped) #Normalisation after cropping! If not, we get 0 padding instead of smallest value
                         img_list.append(slice_cropped)
-                        #im = Image.fromarray(slice_img)  
-                        # im = Image.fromarray(slice_cropped)  
-                        # if im.mode != 'RGB':
-                        #     im = im.convert('RGB')  
-                        #data_file_name = 'pat_%s_diag_%s_frame_%s_slice_%s.png' % (str(pat_id), infos['Group'], str(frame), str(z))
                         data_file_name = 'pat_%s_diag_%s_frame_%s_slice_%s.npy' % (str(pat_id), infos['Group'], str(frame), str(z))
                         # determines to which data split to save
                         data_split = pat_train_test_val[pat_id]
@@ -184,12 +158,9 @@ def load_patient_frames(input_folder, pat_train_test_val, size, target_resolutio
                         #im.save(os.path.join(preprocessing_folder, 'slices', data_split, data_file_name))  
                         slice_cropped = np.float32(slice_cropped)
                         np.save(data_file_path, slice_cropped)
-        
-    #diagnoses = np.asarray(diag_list)           
     return img_list, mask_list #, info_list, diagnoses
                                   
- 
-    
+
     ################################################################### 
     # Requirements for data splits: (similarly to CamVid/Cityscapes)
     # diagnoses have to be represented in train, test, val

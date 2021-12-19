@@ -10,9 +10,7 @@ import numpy as np
 import random
 import data.augmentation as aug
 
-import torchio as tio
-
-num_classes = 3 # 5 for originial
+num_classes = 3
 ignore_label = 3
 path = 'brats18'
 
@@ -42,7 +40,6 @@ class Brats18(torch.utils.data.Dataset):
     def __init__(self, mode, data_path='', code_path='', joint_transform=None,
                  sliding_crop=None, transform=None, target_transform=None, subset=False):
         super(Brats18, self).__init__()
-        #self.filePath = filePath
         #self.filePath = '/mnt/qb/baumgartner/cschmidt77_data/BraTS2018/TrainingData/HGG/data_3D_size_160_192_160_res_1.0_1.0_1.0.hdf5' # @carina only HGG data
         self.mode = mode
         self.file = None
@@ -94,35 +91,19 @@ class Brats18(torch.utils.data.Dataset):
     def __getitem__(self, index):
         ############## @carina #####################
         img_path, mask_path, im_name = self.imgs[index]
-        # @carina added 
         img, mask = np.load(img_path), np.load(mask_path)
-        
-        #lazily open file
-        #self.openFileIfNotOpen()
-
-        #load from hdf5 file
-        # image = self.file["images_" + self.mode][index, ...]
-        # if self.hasMasks: labels = self.file["masks_" + self.mode][index, ...]  
 
         #Prepare data depending on soft/hard augmentation scheme
         if not self.nnAugmentation:
             if not self.trainOriginalClasses and (self.mode != "train" or self.softAugmentation):
-                # if self.hasMasks: labels = self._toEvaluationOneHot(labels)
                 if self.hasMask: self._toEvaluationOneHot(mask)
                 defaultLabelValues = np.zeros(3, dtype=np.float32)
             else:
-                #if self.hasMasks: labels = self._toOrignalCategoryOneHot(labels)
                 if self.hasMasks: mask = self._toOrignalCategoryOneHot(mask)
                 defaultLabelValues = np.asarray([1, 0, 0, 0, 0], dtype=np.float32)
         elif self.hasMasks:
-            #if labels.ndim <4:
             if mask.ndim < 4:
-                #print("stack mask on axis 3")
-                #print("mask before expand dim: ", mask.shape)
-                #mask = np.stack((mask, mask, mask, mask), axis = 3) #stacks mask along third dimension, helper for augmentations
                 mask = np.expand_dims(mask, 3) # add a fourth dimension
-                #print("mask after expand dim: ", mask.shape)
-                #labels = np.expand_dims(labels, 3)
             defaultLabelValues = np.asarray([0], dtype=np.float32)
 
         #augment data
@@ -131,7 +112,6 @@ class Brats18(torch.utils.data.Dataset):
             mask = np.stack((mask, mask, mask, mask), axis = 3) #stacks mask along third dimension, helper for augmentations
             mask = np.squeeze(mask) #removes dim of size 1 
             #print("image.shape: ", img.shape) #(160, 192, 160, 4)
-            #print("mask.shape: ", mask.shape) #(160, 192, 160, 4)
 
             # image needs and mask need to be 4-dim, maybe add fourth dim for mask
             img, mask = aug.augment3DImage(img, #image,
@@ -152,9 +132,7 @@ class Brats18(torch.utils.data.Dataset):
             mask = np.resize(mask, (160,192,160,1))
 
         if self.nnAugmentation:
-            #if self.hasMasks: labels = self._toEvaluationOneHot(np.squeeze(labels, 3))
-            if self.hasMasks: 
-                #print("mask.shape: ", mask.shape)
+            if self.hasMasks:
                 mask = self._toEvaluationOneHot(np.squeeze(mask, 3))
         else:
             if self.mode == "train" and not self.softAugmentation and not self.trainOriginalClasses and self.hasMasks:
@@ -176,8 +154,6 @@ class Brats18(torch.utils.data.Dataset):
         if self.hasMasks: 
             mask = np.resize(mask, (128, 128, 128 ,1))
             mask = np.transpose(mask, (3, 0, 1, 2))  # bring into NCWH format
-            #print("img.shape after transpose")
-            #print("mask.shape after transpose")
 
         # to tensor
         #image = image[:, 0:32, 0:32, 0:32]
@@ -191,19 +167,8 @@ class Brats18(torch.utils.data.Dataset):
 
         if self.returnOffsets:
             print("set offset correctly")
-            # xOffset = self.file["xOffsets_" + self.mode][index]
-            # yOffset = self.file["yOffsets_" + self.mode][index]
-            # zOffset = self.file["zOffsets_" + self.mode][index]
-            # if self.hasMasks:
-            #     return image, str(pid), labels, xOffset, yOffset, zOffset
-            # else:
-            #     return image, pid, xOffset, yOffset, zOffset
         else:
             if self.hasMasks:
-                # print("image min max: ", img.min(), img.max())
-                # print("labels min max: ", mask.min(), mask.max())
-                # print("img.shape: ", img.shape)
-                # print("mask.shape: ", mask.shape)
                 assert img.shape == torch.Size([4, 128, 128, 128]) #CWHD
                 assert mask.shape == torch.Size([1, 128, 128, 128]) #CWHD
                 return img, mask, (img_path, mask_path, im_name) # str(pid)) #str(pid), labels
@@ -214,11 +179,6 @@ class Brats18(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.imgs) #return length of images
-        #lazily open file
-        # self.openFileIfNotOpen()
-        # # @carina changed to mode train for testing purpose
-        # self.mode = 'train'
-        # return self.file["images_" + self.mode].shape[0]
 
     def openFileIfNotOpen(self):
         if self.file == None:

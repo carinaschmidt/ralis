@@ -55,7 +55,7 @@ for budget in 35584   #60*16=960 regions, 192 is 20%
 
 # for augm in 'stdAug' 'RIRD'  #60*16=960 regions, 192 is 20%
 #     do
-#     $exec_command python3 -u $code_path/calculate3Ddice_patientwise.py \
+#     $exec_command python3 -u $code_path/calculate3Ddice_patientwise_acdc.py \
 #     --exp-name "2021-11-05-supervised-brats18_DT3_RIRD_ImageNetBackbone_lr_0.01_${SLURM_ARRAY_TASK_ID}" --checkpointer \
 #     --ckpt-path '/mnt/qb/baumgartner/cschmidt77_data/_FINAL_brats18_exp6/' --data-path $data_path \
 #     --dataset 'brats18' --al-algorithm 'ralis'

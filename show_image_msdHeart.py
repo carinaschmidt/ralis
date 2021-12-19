@@ -21,6 +21,7 @@ data_path = '/mnt/qb/baumgartner/cschmidt77_data'
 #run locally
 code_path = '/home/carina/baumgartner/cschmidt77/devel/ralis'
 
+# visualise MSD Heart image data
 def main(args):
     ####------ Create segmentation, query and target networks ------####
     kwargs_models = {"dataset": args.dataset,
@@ -56,8 +57,6 @@ def main(args):
         img_path = os.path.join(root, "slices", img_name)
         mask_path = os.path.join(root, "gt", img_name)
         img_np, mask_np = np.load(img_path), np.load(mask_path)
-        #clean_border = segmentation.clear_border(mask_np).astype(np.int8)
-        #img, clean_border = torch.from_numpy(img_np), torch.from_numpy(clean_border)
         img, mask = torch.from_numpy(img_np), torch.from_numpy(mask_np)
         img = torch.stack((img, img, img), dim=0)
 
@@ -69,8 +68,6 @@ def main(args):
 
         output, _ = net(im_t)
         # Get segmentation maps
-        #import ipdb
-        #ipdb.set_trace()
         predictions_py = output.data.max(1)[1].squeeze_(1)
 
         pred_cpu = predictions_py.cpu()
@@ -92,40 +89,6 @@ def main(args):
         #plt.show()
         plt.savefig(os.path.join('/home/carina/Desktop/show_images/' +'2021-07-19_img_msdHeart_gt_pred_lr05_interpolationNone' + img_name.split('.')[0] + '.png'))
 
-    #for a single image
-    # img_name = 'pat_4_diag_2_frame_01_slice_5.npy'
-    # img_path = os.path.join(root, "slices", "train", img_name)
-    # mask_path = os.path.join(root, "gt", "train", img_name)
-    
-    # img_np, mask_np = np.load(img_path), np.load(mask_path)
-    # img, mask = torch.from_numpy(img_np), torch.from_numpy(mask_np)
-    # img = torch.stack((img, img, img), dim=0)
-
-    # num_classes = 4
-    
-    # im_t = img
-    # if im_t.dim() == 3:
-    #     im_t_sz = im_t.size()
-    #     im_t = im_t.view(1, im_t_sz[0], im_t_sz[1], im_t_sz[2])
-    #     im_t = Variable(im_t).cuda()
-
-    # output, _ = net(im_t)
-    # # Get segmentation maps
-    # predictions_py = output.data.max(1)[1].squeeze_(1)
-
-    # pred_cpu = predictions_py.cpu()
-    # preds = pred_cpu.detach().numpy()
-
-    # im_t = im_t.cpu()
-    # imt = im_t.detach().numpy()
-
-    # #plt.figure()
-    # fig, ax = plt.subplots(1,3)
-    # ax[0].imshow(imt[-1,-1,:,:],cmap='gray') #image
-    # ax[1].imshow(mask) #mask
-    # ax[2].imshow(preds[-1,:,:]) #prediction
-    # plt.show()
-    
 
 if __name__ == '__main__':
     ####------ Parse arguments from console  ------####

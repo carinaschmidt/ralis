@@ -4,14 +4,8 @@ import os
 import numpy as np
 import torch
 from torch.utils import data
-import torchio as tio
 
-import utils.parser as parser
-import data.augmentation as aug
-
-import torchio as tio
-
-num_classes = 4 # 5 for originial
+num_classes = 4
 ignore_label = 4
 path = 'BraTS2018'
 
@@ -69,11 +63,6 @@ class BraTS18_2D(data.Dataset):
     def __getitem__(self, index):
         img_path, mask_path, im_name = self.imgs[index]
         img, mask = np.load(img_path), np.load(mask_path)
-        #print("before one hot:", mask.shape)
-        #print("mask max: ", mask.max())
-        #mask = self._toEvaluationOneHot(mask)
-        #print("mask max after eval: ", mask.max())
-        #print("after to One Hot Encode mask.shape: ", mask.shape)
         #img = img[...,:3] #take only first three channels into account, since network expects 3 channels instead of 4
         mask = np.where(mask == 4, 3, mask)
 
@@ -82,39 +71,12 @@ class BraTS18_2D(data.Dataset):
         if self.joint_transform is not None:
             img, mask = self.joint_transform(img, mask)
 
-
-        # if self.transform is not None: #torchvision standard transform
-        #     if type(img) != torch.Tensor:
-        #         img = self.transform(img) #self.transforms transforms ToTensor!! 
-        
         if type(img) != torch.Tensor:
             img = torch.from_numpy(img.copy())
             mask = torch.from_numpy(mask.copy())
         img = torch.squeeze(img) #removes dimensions of size 1  
-        mask = torch.squeeze(mask) 
-        #print("img.shape before return: ", img.shape)
-        #print("mask.shape before return: ", mask.shape)
+        mask = torch.squeeze(mask)
         return img, mask.long(), (img_path, mask_path, im_name)
-
-
-    # def _toEvaluationOneHot(self, labels):
-
-    #     ### all labels not equal to 0 is whole tumour (WT)
-    #     ### all labels not equal to 0 and not 2 is TC
-    #     shape = labels.shape
-
-    #     out = np.zeros([shape[0], shape[1], 3], dtype=np.float32)
-    #     #print("out.shape: ", out.shape)
-    #     out[:, :, 0] = (labels != 0) #RoI WT (TC and ED)
-    #     out[:, :, 1] = (labels != 0) * (labels != 2) #TC (everything besides 0 and 2)
-    #     out[:, :, 2] = (labels == 4) # ET
-    #     return out
-    
-    # def _toEvaluationTensor(self, labels):
-    #     if labels[labels==0]:
-    #         print("zero labels")
-    #     else:
-    #         if labels[labels==0]
 
 
 

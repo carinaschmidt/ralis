@@ -4,18 +4,11 @@ import os
 import numpy as np
 import torch
 from torch.utils import data
-import torchio as tio
-
 import utils.parser as parser
 
 num_classes = 4
 ignore_label = 4
 path = 'acdc'
-# palette = [128, 128, 128, 128, 0, 0, 192, 192, 128, 128, 64, 128, 0, 0, 192, 128, 128, 0, 192, 128, 128, 64, 64, 128,
-#            64, 0, 128, 64, 64, 0, 0, 128, 192, 0, 0, 0]
-# zero_pad = 256 * 3 - len(palette)
-# for i in range(zero_pad):
-#     palette.append(0)
 
 def make_dataset(mode, root):
     if mode == "train":
@@ -90,13 +83,8 @@ class ACDC(data.Dataset):
 
     def __getitem__(self, index):
         img_path, mask_path, im_name = self.imgs[index]
-        # @carina added 
         img, mask = np.load(img_path), np.load(mask_path)
         img, mask = torch.from_numpy(img), torch.from_numpy(mask)
-        #mask = mask.unsqueeze(0)
-        #img = torch.stack((img, img, img), dim=0)
-        #print("img.shape: ", img.shape)
-        #print("mask.shape: ", mask.shape)
         if self.joint_transform is not None:
             img, mask = self.joint_transform(img, mask)
 
@@ -107,32 +95,7 @@ class ACDC(data.Dataset):
         img = torch.squeeze(img) #removes dimensions of size 1
         mask = torch.squeeze(mask) 
         img = torch.stack((img, img, img), dim=0)
-        # print("img.shape: ", img.shape)
-        # print("mask.shape: ", mask.shape)
         return img, mask.long(), (img_path, mask_path, im_name)
-
-    #@carina No augmentations
-    # def __getitem__(self, index):
-    #     #import ipdb
-    #     #ipdb.set_trace()
-    #     img_path, mask_path, im_name = self.imgs[index]
-    #     # @carina added 
-    #     img, mask = np.load(img_path), np.load(mask_path)
-    #     img, mask = torch.from_numpy(img), torch.from_numpy(mask)
-    #     # print("img.shape: ", img.shape)
-    #     # print("mask.shape: ", mask.shape)
-    #     # if self.joint_transform is not None:
-    #     #     img, mask = self.joint_transform(img, mask)
-    #     # if self.transform is not None: #torchvision standard transform
-    #     #     if type(img) != torch.Tensor:
-    #     #         img = self.transform(img) #self.transforms transforms ToTensor!! 
-    #     # if self.target_transform is not None:
-    #     #     mask = self.target_transform(mask)
-
-    #     img = torch.stack((img, img, img), dim=0)
-    #     #print("img.shape after transform: ", img.shape)
-    #     #print("mask.shape after transform: ", mask.shape)
-    #     return img, mask.long(), (img_path, mask_path, im_name)
 
 
     def __len__(self):

@@ -33,13 +33,6 @@ def augment3DImage(img, lbl, defaultLabelValues, nnAug, do_rotate=True, rotDegre
     else:
         interpolationMethod = cv2.INTER_LINEAR
 
-    #visualize augmentation
-    # halfOffset = zSize // 6
-    # sliceIndices = [halfOffset, 3*halfOffset, 5*halfOffset]
-    # for i in range(len(sliceIndices)):
-    #     visualizeSlice(img[:, :, sliceIndices[i], 0])
-    #     visualizeSlice(lbl[:, :, sliceIndices[i], 0])
-
     # ROTATE
     if do_rotate:
         #print("rotate")
@@ -97,17 +90,6 @@ def augment3DImage(img, lbl, defaultLabelValues, nnAug, do_rotate=True, rotDegre
             if np.random.random() < 0.5:
                 img = np.flip(img, axis=i)
                 lbl = np.flip(lbl, axis=i)
-
-
-    #log augmentation time
-    #print("Augmentation took {}s".format(time.time() - startTime))
-
-    #visualize augmentation
-    # halfOffset = zSize // 6
-    # sliceIndices = [halfOffset, 3*halfOffset, 5*halfOffset]
-    # for i in range(len(sliceIndices)):
-    #     visualizeSlice(img[:, :, sliceIndices[i], 0])
-    #     visualizeSlice(lbl[:, :, sliceIndices[i], 4])
 
     return img.copy(), lbl.copy() #pytorch cannot handle negative stride in view
 

@@ -1,10 +1,5 @@
 import os
-import nibabel as nib
 import numpy as np
-import matplotlib.pyplot as plt
-
-# get directory with patients
-# for each patient directory, store the info file with __01 for patient number, and store other files separately in arrays 
 
 def create_splits(data_dir, dS_ratio, dT_ratio, dR_ratio):  
     '''divides patients in four data splits with given split ratio'''
@@ -40,7 +35,6 @@ def create_ref_data_splits_file(data_dir,
 
     data_file_name = 'data_%s_size_%s_res_%s_al_splits.npy' % (mode, size_str, res_str)
     data_file_path = os.path.join(preproc_dir, data_file_name)
-    #print(data_file_path)
     
     # create new npy file to save data
     npy_file = np.save(data_file_name, data_splits)  
